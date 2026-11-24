@@ -1,4 +1,4 @@
--- /gpe debug: in-game check (development builds only, left out of the release).
+-- /gpen debug: in-game check (development builds only, left out of the release).
 -- Turns "Hide bars out of combat" on (With a target 40%, In range 70%, unless
 -- set) and samples what the player sees, in four states the player walks through:
 --   hidden   : out of combat, no target          -> every part at alpha 0
@@ -191,7 +191,7 @@ function Debug.Start()
     print("Gamepad Enhancer check: walk through hidden, target, in range and fight (see the top left).")
 end
 
--- /gpe debug lt: 60 s recording of every alpha change on the controller bars,
+-- /gpen debug lt: 60 s recording of every alpha change on the controller bars,
 -- for "LT/RT hides the buttons". Each line: time, combat, then the alphas.
 function Debug.RecordTriggers()
     if running then print("Gamepad Enhancer check: already running.") return end
@@ -244,7 +244,7 @@ function Debug.RecordTriggers()
     end)
 end
 
--- /gpe debug range: 30 s log of the game's range answers for each shown bar
+-- /gpen debug range: 30 s log of the game's range answers for each shown bar
 -- spell (for "Maul makes In range wrong"): asked / from the range event / has a
 -- range. A line only when something changed.
 function Debug.RecordRange()
