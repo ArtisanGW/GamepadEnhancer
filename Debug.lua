@@ -244,7 +244,60 @@ function Debug.RecordTriggers()
     end)
 end
 
+-- /gpe debug range: 30 s log of the game's range answers for each shown bar
+-- spell (for "Maul makes In range wrong"). A line only when something changed.
+function Debug.RecordRange()
+    if running then print("Gamepad Enhancer check: already running.") return end
+    if type(_G.GamepadEnhancerDebugDB) ~= "table" then _G.GamepadEnhancerDebugDB = {} end
+    local log = {}
+    _G.GamepadEnhancerDebugDB.rangeLog = log
+    local function spellName(spellID)
+        if C_Spell and C_Spell.GetSpellName then return C_Spell.GetSpellName(spellID) end
+        return tostring(spellID)
+    end
+    local function snapshot()
+        local parts = { UnitExists("target") and ("target " .. tostring(UnitName("target"))) or "no target",
+            "addon says " .. (Enhancer.SpellRange.TargetInRange() and "IN RANGE" or "out") }
+        for _, button in ipairs(Enhancer.BarHalves.AllButtons()) do
+            if button:IsVisible() and type(button.action) == "number" then
+                local actionType, id = GetActionInfo(button.action)
+                if actionType then
+                    local inRange = C_ActionBar.IsActionInRange(button.action, "target")
+                    local hasRange = "-"
+                    if actionType == "spell" and C_Spell and C_Spell.SpellHasRange then hasRange = tostring(C_Spell.SpellHasRange(id)) end
+                    parts[#parts + 1] = string.format("%s=%s/r:%s", actionType == "spell" and tostring(spellName(id)) or actionType .. tostring(id),
+                        tostring(inRange), hasRange)
+                end
+            end
+        end
+        return table.concat(parts, " | ")
+    end
+    running = CreateFrame("Frame")
+    local timer = UIParent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    timer:SetPoint("TOPLEFT", 20, -20)
+    local started, sinceSample, last = GetTime(), 0, nil
+    running:SetScript("OnUpdate", function(_, elapsed)
+        sinceSample = sinceSample + elapsed
+        if sinceSample < 0.25 then return end
+        sinceSample = 0
+        local now = snapshot()
+        if now ~= last and #log < 300 then
+            log[#log + 1] = string.format("%.1f %s", GetTime() - started, now)
+            last = now
+        end
+        local left = 30 - (GetTime() - started)
+        timer:SetText(string.format("GPE range log (%d s): in bear form, target a mob far away, then walk up to it", left))
+        if left <= 0 then
+            running:SetScript("OnUpdate", nil)
+            running = nil
+            timer:SetText("")
+            showReloadBox("Gamepad Enhancer range log done.\n\nReload to save it.")
+        end
+    end)
+end
+
 function Debug.Command(argument)
     if argument == "lt" then return Debug.RecordTriggers() end
+    if argument == "range" then return Debug.RecordRange() end
     Debug.Start()
 end
