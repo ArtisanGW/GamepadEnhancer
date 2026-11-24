@@ -266,7 +266,13 @@ function Debug.RecordRange()
                     local inRange = tostring(C_ActionBar.IsActionInRange(button.action, "target"))
                         .. "/ev:" .. tostring(Enhancer.SpellRange.inRangeBySlot[button.action] == true)
                     local hasRange = "-"
-                    if actionType == "spell" and C_Spell and C_Spell.SpellHasRange then hasRange = tostring(C_Spell.SpellHasRange(id)) end
+                    if actionType == "spell" and C_Spell and C_Spell.SpellHasRange then
+                        hasRange = tostring(C_Spell.SpellHasRange(id))
+                        local spellInRange = C_Spell.IsSpellInRange and C_Spell.IsSpellInRange(id, "target")
+                        local info = C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(id)
+                        hasRange = string.format("%s/sp:%s/yd:%s-%s", hasRange, tostring(spellInRange),
+                            tostring(info and info.minRange), tostring(info and info.maxRange))
+                    end
                     parts[#parts + 1] = string.format("%s=%s/r:%s", actionType == "spell" and tostring(spellName(id)) or actionType .. tostring(id),
                         tostring(inRange), hasRange)
                 end
