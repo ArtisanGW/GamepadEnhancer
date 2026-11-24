@@ -8,6 +8,10 @@ local function percentLabel(value)
     return math.floor((tonumber(value) or 0) + 0.5) .. "%"
 end
 
+local function secondsLabel(value)
+    return string.format("%.1f s", tonumber(value) or 0)
+end
+
 local function sliderOptions(minimum, maximum, step, formatLabel)
     local options = Settings.CreateSliderOptions(minimum, maximum, step)
     local rightLabel = MinimalSliderWithSteppersMixin and MinimalSliderWithSteppersMixin.Label
@@ -38,6 +42,21 @@ function SettingsPage.Register()
     Settings.CreateSlider(category, opacitySetting, sliderOptions(0, 100, 1, percentLabel),
         "How visible the bars are out of combat while your target is in range.\n\n"
         .. "0% keeps them hidden.")
+
+    local shoulderName = "GamepadEnhancer_shoulderOpacity"
+    local shoulderSetting = Settings.RegisterAddOnSetting(category, shoulderName, "shoulderOpacity", settings,
+        Settings.VarType.Number, "Shoulder icons", Enhancer.SavedSettings.DEFAULTS.shoulderOpacity)
+    Settings.SetOnValueChangedCallback(shoulderName, function() Enhancer.ShoulderFade.Apply() end)
+    Settings.CreateSlider(category, shoulderSetting, sliderOptions(0, 100, 1, percentLabel),
+        "How visible the two shoulder icons are out of combat.\n\n"
+        .. "100% is the game's look. In a fight they show fully.")
+
+    local fadeName = "GamepadEnhancer_fadeSeconds"
+    local fadeSetting = Settings.RegisterAddOnSetting(category, fadeName, "fadeSeconds", settings,
+        Settings.VarType.Number, "Fade time", Enhancer.SavedSettings.DEFAULTS.fadeSeconds)
+    Settings.CreateSlider(category, fadeSetting, sliderOptions(0, 10, 0.1, secondsLabel),
+        "How long the bars and shoulder icons take to fade in or out.\n\n"
+        .. "0 s changes them at once.")
 
     Settings.RegisterAddOnCategory(category)
 end

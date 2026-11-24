@@ -10,7 +10,10 @@ local function hookBarsRoot()
     local root = _G.GamepadMainActionBarFrame
     if hookedRoot or type(root) ~= "table" or root:IsForbidden() then return end
     hookedRoot = true
-    root:HookScript("OnShow", function() Enhancer.OutOfCombatFade.Apply() end)
+    root:HookScript("OnShow", function()
+        Enhancer.OutOfCombatFade.Apply()
+        Enhancer.ShoulderFade.Apply()
+    end)
 end
 
 eventFrame:RegisterEvent("ADDON_LOADED")
@@ -28,11 +31,14 @@ eventFrame:SetScript("OnEvent", function(_, event, name)
     elseif event == "PLAYER_ENTERING_WORLD" then
         hookBarsRoot()
         Enhancer.OutOfCombatFade.Apply()
+        Enhancer.ShoulderFade.Apply()
     elseif event == "PLAYER_REGEN_DISABLED" then
         -- A fight starts: everything back (combat lockdown starts right after this event).
         Enhancer.OutOfCombatFade.Restore()
+        Enhancer.ShoulderFade.Restore()
     elseif event == "PLAYER_REGEN_ENABLED" then
         Enhancer.CombatQueue.Flush()
         Enhancer.OutOfCombatFade.Apply()
+        Enhancer.ShoulderFade.Apply()
     end
 end)

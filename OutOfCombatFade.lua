@@ -51,8 +51,8 @@ function OutOfCombatFade.SetAlpha(alpha)
     OutOfCombatFade.currentAlpha = alpha
     for _, part in ipairs(OutOfCombatFade.Parts()) do
         if not part:IsForbidden() then
-            if OutOfCombatFade.originalAlphas[part] == nil then OutOfCombatFade.originalAlphas[part] = part:GetAlpha() end
-            part:SetAlpha(alpha)
+            if OutOfCombatFade.originalAlphas[part] == nil then OutOfCombatFade.originalAlphas[part] = Enhancer.Fader.Target(part) end
+            Enhancer.Fader.To(part, alpha)
         end
     end
 end
@@ -60,7 +60,7 @@ end
 -- Puts every faded part back as it was.
 function OutOfCombatFade.Restore()
     for part, alpha in pairs(OutOfCombatFade.originalAlphas) do
-        if not part:IsForbidden() then part:SetAlpha(alpha) end
+        if not part:IsForbidden() then Enhancer.Fader.To(part, alpha) end
     end
     OutOfCombatFade.originalAlphas = setmetatable({}, { __mode = "k" })
     OutOfCombatFade.currentAlpha = nil

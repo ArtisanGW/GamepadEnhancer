@@ -32,10 +32,14 @@ local function newFrame(parent)
     function frame:RegisterEvent(event) self.events[event] = true end
     function frame:SetScript(script, handler) self.scripts[script] = handler end
     function frame:HookScript(script, handler) self.scripts[script] = handler end
+    function frame:Show() self.shown = true end
+    function frame:Hide() self.shown = false end
     return frame
 end
 
 local function boot(saved)
+    saved = saved or {}
+    if saved.fadeSeconds == nil then saved.fadeSeconds = 0 end   -- at once, unless a test fades
     game = { combat = false, errors = {}, frames = {}, target = false, inRange = {} }
     _G.GamepadEnhancerDB = saved
     _G.InCombatLockdown = function() return game.combat end
@@ -61,6 +65,7 @@ local function boot(saved)
     local addonTable = {}
     for _, fileName in ipairs(TOC_FILES) do assert(loadfile(fileName))("GamepadEnhancer", addonTable) end
     game.eventFrame = game.frames[#game.frames]
+    game.fadeDriver = game.frames[1]
     return addonTable
 end
 local function fire(event, ...) game.eventFrame.scripts.OnEvent(game.eventFrame, event, ...) end
@@ -105,6 +110,38 @@ test("turning it off puts the game's alpha back", function()
     _G.GamepadEnhancerDB.hideOutOfCombat = false
     addon.OutOfCombatFade.Apply()
     expectEqual(game.decoration.alpha, 0.7)
+end)
+
+test("shoulder icons: own opacity out of combat, full in a fight", function()
+    boot({ shoulderOpacity = 30 })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    local shoulder = game.pageUnit.LeftShoulderBackground
+    expectEqual(shoulder.alpha, 0.3, "out of combat")
+    expectEqual(game.bar.alpha, 1, "rest of the bars untouched")
+    fire("PLAYER_REGEN_DISABLED"); game.combat = true
+    expectEqual(shoulder.alpha, 1, "in combat")
+    game.combat = false; fire("PLAYER_REGEN_ENABLED")
+    expectEqual(shoulder.alpha, 0.3, "after combat")
+end)
+
+test("shoulder icons at 100%: left as the game has them", function()
+    boot(nil)
+    game.pageUnit.LeftShoulderBackground.alpha = 0.9
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 0.9)
+end)
+
+test("fade time: alpha moves over the time set", function()
+    boot({ hideOutOfCombat = true, fadeSeconds = 1 })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    local tick = function(seconds) game.fadeDriver.scripts.OnUpdate(game.fadeDriver, seconds) end
+    expectEqual(game.bar.alpha, 1, "starts where it was")
+    tick(0.5); expectEqual(game.bar.alpha, 0.5, "halfway")
+    tick(0.5); expectEqual(game.bar.alpha, 0, "done")
+    expectEqual(game.fadeDriver.shown, false, "driver stops")
+    fire("PLAYER_REGEN_DISABLED"); game.combat = true
+    tick(0.25); expectEqual(game.bar.alpha, 0.25, "fades in during a fight")
+    tick(1); expectEqual(game.bar.alpha, 1, "fully back")
 end)
 
 test("a change asked for in combat runs when combat ends; errors go to the handler", function()

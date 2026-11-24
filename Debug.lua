@@ -4,7 +4,8 @@
 --   hidden : out of combat, no target in range -> every part at alpha 0
 --   faded  : out of combat, target in range     -> every part at the faded alpha
 --   fight  : in combat                           -> every part back to its alpha
--- and that the two shoulder icons stay shown, with no blocked actions. Ends once
+-- and that the two shoulder icons are at their own opacity out of combat (50%
+-- unless set) and as the game had them in a fight, with no blocked actions. Ends once
 -- each state has 20 samples (or after 3 minutes) with a Reload box; the findings
 -- go to GamepadEnhancerDebugDB and the settings are put back.
 local _, Enhancer = ...
@@ -14,6 +15,7 @@ local Debug = {
     SAMPLES_NEEDED = 20,
     TIMEOUT = 180,
     TEST_OPACITY = 40,
+    TEST_SHOULDER_OPACITY = 50,
     TOLERANCE = 0.01,
 }
 Enhancer.Debug = Debug
@@ -40,19 +42,22 @@ local function showReloadBox(text)
     later:SetScript("OnClick", function() box:Hide() end)
 end
 
--- The shoulder icons: shown, and not faded.
-local function shouldersShown()
+-- The shoulder icons: at the opacity this state needs (nil = shown as the game had them).
+local function shouldersRight(wantedAlpha)
     local pageUnit = _G.GamepadMainActionBarFrame and _G.GamepadMainActionBarFrame.PageUnit
     if not pageUnit then return false end
     for _, key in ipairs({ "LeftShoulderBackground", "RightShoulderBackground" }) do
         local texture = pageUnit[key]
-        if not (texture and texture:IsVisible() and texture:GetAlpha() > 0 and pageUnit:GetEffectiveAlpha() > 0) then return false end
+        if not (texture and texture:IsVisible() and pageUnit:GetEffectiveAlpha() > 0) then return false end
+        local want = wantedAlpha or results.shoulderAlphasBefore[key]
+        if math.abs(texture:GetAlpha() - want) > Debug.TOLERANCE then return false end
     end
     return true
 end
 
 -- One sample: the state, and whether every part has the alpha that state needs.
 local function sample(opacity)
+    if Enhancer.Fader.IsBusy() then return "fading" end
     local state, expected
     if InCombatLockdown() then
         state = "fight"
@@ -75,7 +80,7 @@ local function sample(opacity)
         end
     end
     if allRight then counts.right = counts.right + 1 else counts.wrong = counts.wrong + 1 end
-    if shouldersShown() then counts.shouldersShown = counts.shouldersShown + 1 end
+    if shouldersRight(state ~= "fight" and results.shoulderOpacity / 100 or nil) then counts.shouldersShown = counts.shouldersShown + 1 end
     return state
 end
 
@@ -94,7 +99,15 @@ function Debug.Start()
         states = { hidden = newCounts(), faded = newCounts(), fight = newCounts() } }
     results = _G.GamepadEnhancerDebugDB
     local settings = Enhancer.SavedSettings.Get()
-    local savedOn, savedOpacity = settings.hideOutOfCombat, settings.fadedOpacity
+    local savedOn, savedOpacity, savedShoulder = settings.hideOutOfCombat, settings.fadedOpacity, settings.shoulderOpacity
+    Enhancer.ShoulderFade.Restore()
+    local pageUnit = _G.GamepadMainActionBarFrame.PageUnit
+    results.shoulderAlphasBefore = {}
+    for _, key in ipairs({ "LeftShoulderBackground", "RightShoulderBackground" }) do
+        results.shoulderAlphasBefore[key] = pageUnit[key] and pageUnit[key]:GetAlpha() or 1
+    end
+    results.shoulderOpacity = (savedShoulder < 100) and savedShoulder or Debug.TEST_SHOULDER_OPACITY
+    settings.shoulderOpacity = results.shoulderOpacity
     local opacity = (savedOpacity > 0) and savedOpacity or Debug.TEST_OPACITY
     -- Each part's alpha with the addon off: what a fight must bring back.
     Enhancer.OutOfCombatFade.Restore()
@@ -102,6 +115,8 @@ function Debug.Start()
     for _, part in ipairs(Enhancer.OutOfCombatFade.Parts()) do results.alphasBefore[part] = part:GetAlpha() end
     settings.hideOutOfCombat, settings.fadedOpacity = true, opacity
     Enhancer.OutOfCombatFade.Apply()
+    Enhancer.ShoulderFade.Apply()
+    record("shoulder icons found", #Enhancer.ShoulderFade.Textures() == 6, #Enhancer.ShoulderFade.Textures() .. " textures")
     record("parts found to fade", #Enhancer.OutOfCombatFade.Parts() > 0, #Enhancer.OutOfCombatFade.Parts() .. " parts")
     local rangeAnswers = 0
     for _, button in ipairs(Enhancer.BarHalves.AllButtons()) do
@@ -134,14 +149,15 @@ function Debug.Start()
             running:SetScript("OnUpdate", nil)
             running:UnregisterAllEvents()
             timer:SetText("")
-            settings.hideOutOfCombat, settings.fadedOpacity = savedOn, savedOpacity
+            settings.hideOutOfCombat, settings.fadedOpacity, settings.shoulderOpacity = savedOn, savedOpacity, savedShoulder
             Enhancer.OutOfCombatFade.Apply()
+            Enhancer.ShoulderFade.Apply()
             results.alphasBefore = nil   -- frames can't be saved
             for _, name in ipairs({ "hidden", "faded", "fight" }) do
                 local counts = results.states[name]
                 local total = counts.right + counts.wrong
                 record(name .. ": every part at the right alpha", total > 0 and counts.wrong == 0, counts.right .. "/" .. total .. " samples")
-                record(name .. ": shoulder icons shown", total > 0 and counts.shouldersShown == total, counts.shouldersShown .. "/" .. total .. " samples")
+                record(name .. ": shoulder icons at their opacity", total > 0 and counts.shouldersShown == total, counts.shouldersShown .. "/" .. total .. " samples")
             end
             record("no blocked actions", #results.blocked == 0, #results.blocked .. " blocked")
             local passed, failed = 0, 0
