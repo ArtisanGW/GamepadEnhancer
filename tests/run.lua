@@ -83,15 +83,18 @@ test("on: hidden out of combat, shoulder icons stay", function()
     expectEqual(game.pageUnit.alpha, 1, "page unit"); expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 1, "shoulder")
 end)
 
-test("target in range of a bar spell: the faded look (20% by default)", function()
+test("a target: 20%; in range of a bar spell: 50% (defaults)", function()
     local addon = boot({ hideOutOfCombat = true })
     fire("ADDON_LOADED", "GamepadEnhancer")
-    game.target, game.inRange[1] = true, true
+    game.target = true
     addon.OutOfCombatFade.Apply()
-    expectEqual(game.bar.alpha, 0.2)
-    game.inRange[1] = false
+    expectEqual(game.bar.alpha, 0.2, "target out of range")
+    game.inRange[1] = true
     addon.OutOfCombatFade.Apply()
-    expectEqual(game.bar.alpha, 0, "out of range again")
+    expectEqual(game.bar.alpha, 0.5, "in range")
+    game.target, game.inRange[1] = false, nil
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.bar.alpha, 0, "no target")
 end)
 
 test("a fight brings everything back, its end hides it again", function()

@@ -1,9 +1,10 @@
 -- /gpe debug: in-game check (development builds only, left out of the release).
--- Turns "Hide bars out of combat" on (faded look 40% unless set) and samples
--- what the player sees, in three states the player walks through:
---   hidden : out of combat, no target in range -> every part at alpha 0
---   faded  : out of combat, target in range     -> every part at the faded alpha
---   fight  : in combat                           -> every part back to its alpha
+-- Turns "Hide bars out of combat" on (With a target 40%, In range 70%, unless
+-- set) and samples what the player sees, in four states the player walks through:
+--   hidden   : out of combat, no target          -> every part at alpha 0
+--   target   : out of combat, target out of range -> every part at "With a target"
+--   in range : out of combat, a bar spell reaches  -> every part at "In range"
+--   fight    : in combat                           -> every part back to its alpha
 -- and that the two shoulder icons are at their own opacity out of combat (50%
 -- unless set) and as the game had them in a fight, with no blocked actions. Ends once
 -- each state has 20 samples (or after 3 minutes) with a Reload box; the findings
@@ -16,6 +17,7 @@ local Debug = {
     TIMEOUT = 180,
     TEST_OPACITY = 40,
     TEST_SHOULDER_OPACITY = 50,
+    TEST_IN_RANGE_OPACITY = 70,
     TOLERANCE = 0.01,
 }
 Enhancer.Debug = Debug
@@ -64,10 +66,12 @@ local function sample(opacity)
     local state, expected
     if InCombatLockdown() then
         state = "fight"
-    elseif Enhancer.SpellRange.TargetInRange() then
-        state, expected = "faded", opacity / 100
-    else
+    elseif not UnitExists("target") then
         state, expected = "hidden", 0
+    elseif Enhancer.SpellRange.TargetInRange() then
+        state, expected = "in range", opacity.inRange / 100
+    else
+        state, expected = "target", opacity.target / 100
     end
     local counts = results.states[state]
     local allRight = true
@@ -99,10 +103,10 @@ function Debug.Start()
     if InCombatLockdown() then print("Gamepad Enhancer check: start it out of combat.") return end
     local function newCounts() return { right = 0, wrong = 0, shouldersShown = 0 } end
     _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), checks = {}, blocked = {}, wrongDetails = {},
-        states = { hidden = newCounts(), faded = newCounts(), fight = newCounts() } }
+        states = { hidden = newCounts(), target = newCounts(), ["in range"] = newCounts(), fight = newCounts() } }
     results = _G.GamepadEnhancerDebugDB
     local settings = Enhancer.SavedSettings.Get()
-    local savedOn, savedOpacity, savedShoulder = settings.hideOutOfCombat, settings.fadedOpacity, settings.shoulderOpacity
+    local savedOn, savedOpacity, savedInRange, savedShoulder = settings.hideOutOfCombat, settings.fadedOpacity, settings.inRangeOpacity, settings.shoulderOpacity
     Enhancer.ShoulderFade.Restore()
     local pageUnit = _G.GamepadMainActionBarFrame.PageUnit
     results.shoulderAlphasBefore = {}
@@ -111,12 +115,15 @@ function Debug.Start()
     end
     results.shoulderOpacity = (savedShoulder < 100) and savedShoulder or Debug.TEST_SHOULDER_OPACITY
     settings.shoulderOpacity = results.shoulderOpacity
-    local opacity = (savedOpacity > 0) and savedOpacity or Debug.TEST_OPACITY
+    local opacity = {
+        target = (savedOpacity > 0) and savedOpacity or Debug.TEST_OPACITY,
+        inRange = (savedInRange > 0) and savedInRange or Debug.TEST_IN_RANGE_OPACITY,
+    }
     -- Each part's alpha with the addon off: what a fight must bring back.
     Enhancer.OutOfCombatFade.Restore()
     results.alphasBefore = {}
     for _, part in ipairs(Enhancer.OutOfCombatFade.Parts()) do results.alphasBefore[part] = part:GetAlpha() end
-    settings.hideOutOfCombat, settings.fadedOpacity = true, opacity
+    settings.hideOutOfCombat, settings.fadedOpacity, settings.inRangeOpacity = true, opacity.target, opacity.inRange
     Enhancer.OutOfCombatFade.Apply()
     Enhancer.ShoulderFade.Apply()
     record("shoulder icons found", #Enhancer.ShoulderFade.Textures() == 6, #Enhancer.ShoulderFade.Textures() .. " textures")
@@ -142,21 +149,21 @@ function Debug.Start()
         sinceSample = 0
         local state = sample(opacity)
         local need = {}
-        for _, name in ipairs({ "hidden", "faded", "fight" }) do
+        for _, name in ipairs({ "hidden", "target", "in range", "fight" }) do
             local counts = results.states[name]
             if counts.right + counts.wrong < Debug.SAMPLES_NEEDED then need[#need + 1] = name end
         end
-        timer:SetText(string.format("GPE check (%d s): now %s; still needed: %s\nhidden = no target in range, faded = target in range, fight = in combat",
+        timer:SetText(string.format("GPE check (%d s): now %s; still needed: %s\nhidden = no target, target = out of range, in range = a bar spell reaches it, fight = in combat",
             deadline - GetTime(), state, table.concat(need, ", ")))
         if (done() and not InCombatLockdown()) or GetTime() > deadline then
             running:SetScript("OnUpdate", nil)
             running:UnregisterAllEvents()
             timer:SetText("")
-            settings.hideOutOfCombat, settings.fadedOpacity, settings.shoulderOpacity = savedOn, savedOpacity, savedShoulder
+            settings.hideOutOfCombat, settings.fadedOpacity, settings.inRangeOpacity, settings.shoulderOpacity = savedOn, savedOpacity, savedInRange, savedShoulder
             Enhancer.OutOfCombatFade.Apply()
             Enhancer.ShoulderFade.Apply()
             results.alphasBefore = nil   -- frames can't be saved
-            for _, name in ipairs({ "hidden", "faded", "fight" }) do
+            for _, name in ipairs({ "hidden", "target", "in range", "fight" }) do
                 local counts = results.states[name]
                 local total = counts.right + counts.wrong
                 record(name .. ": every part at the right alpha", total > 0 and counts.wrong == 0, counts.right .. "/" .. total .. " samples")
