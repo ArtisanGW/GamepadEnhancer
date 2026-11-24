@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: Gamepad Enhancer
+## Notes: Customizes the controller's action bars. Widens the gap between their left and right buttons. Settings in Options > AddOns > Gamepad Enhancer, or /gpe.
+## Author: Artisan
+## Version: @project-version@
+## SavedVariables: GamepadEnhancerDB
+## Category: Gamepad
+
+SavedSettings.lua
+CombatQueue.lua
+BarHalves.lua
+Gap.lua
+SettingsPage.lua
+SlashCommand.lua
+Events.lua

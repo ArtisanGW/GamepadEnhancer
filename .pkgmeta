@@ -1,0 +1,9 @@
+package-as: GamepadEnhancer
+
+ignore:
+  - tests
+  - CURSEFORGE.md
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
