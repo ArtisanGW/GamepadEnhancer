@@ -1,36 +1,57 @@
--- Widens the gap between the controller's left and right action bars: the left
--- bar moves left by half the gap and the right bar right by the other half, so
--- the layout stays centered. A gap of 0 is the game's own layout.
+-- Splits each controller action bar into its two halves: the left half's buttons
+-- move left by half the gap and the right half's right by the other half, so the
+-- bar stays centered. A gap of 0 is the game's own layout.
+--
+-- The game puts a button back in its place on every restyle (a press, LT/RT).
+-- Out of combat a post-hook moves it out again at once. In combat the buttons are
+-- protected and can't be moved by an addon (checked in game with /gpe debug), so
+-- they stay where the game puts them until the fight ends.
 local _, Enhancer = ...
 
 local Gap = {
     MINIMUM = 0,
     MAXIMUM = 400,
     STEP = 2,
+    moved = setmetatable({}, { __mode = "k" }),   -- button -> { x = x we set, shift = shift in it }
 }
 Enhancer.Gap = Gap
 
-local function placeSideBars()
-    local SideBars = Enhancer.SideBars
-    local pageUnit = SideBars.PageUnit()
-    if not pageUnit or SideBars.UsesCompactLayout(pageUnit) then return end
-    local shiftX = (tonumber(Enhancer.SavedSettings.Get().gap) or 0) / 2
-    -- Nothing moved yet and no gap asked for: leave the game's frames untouched.
-    if shiftX == 0 and not Gap.moved then return end
-    Gap.moved = shiftX ~= 0
-    local leftAnchor, rightAnchor = SideBars.Anchors(pageUnit)
-    SideBars.Place(pageUnit, leftAnchor, -shiftX)
-    SideBars.Place(pageUnit, rightAnchor, shiftX)
+local function currentShift(button)
+    local side = Enhancer.BarHalves.Side(button)
+    if not side then return 0 end
+    return side * (tonumber(Enhancer.SavedSettings.Get().gap) or 0) / 2
 end
 
--- Applies the saved gap now, or after combat.
+-- Moves one button by the gap, from the game's place for it.
+function Gap.PlaceButton(button)
+    if InCombatLockdown() or button:IsForbidden() then return end
+    local point, relativeTo, relativePoint, x, y = button:GetPoint(1)
+    if not point then return end
+    local moved = Gap.moved[button]
+    local gameX = x
+    if moved and moved.x == x then gameX = x - moved.shift end   -- still where we put it
+    local shift = currentShift(button)
+    if shift == 0 and not moved then return end   -- leave the game's frames untouched
+    local newX = gameX + shift
+    if newX ~= x then
+        button:ClearAllPoints()
+        button:SetPoint(point, relativeTo, relativePoint, newX, y)
+    end
+    Gap.moved[button] = (shift ~= 0) and { x = newX, shift = shift } or nil
+end
+
+local function placeAllButtons()
+    for _, button in ipairs(Enhancer.BarHalves.AllButtons()) do Gap.PlaceButton(button) end
+end
+
+-- Applies the saved gap to every button now, or after combat.
 function Gap.Apply()
-    Enhancer.CombatQueue.Run("gap", placeSideBars)
+    Enhancer.CombatQueue.Run("gap", placeAllButtons)
 end
 
--- After the game lays its bars out again (compact layout on or off), its own
--- places are back: the gap has to be put on again, even if it's 0.
-function Gap.AfterGameLayout()
-    Gap.moved = true
-    Gap.Apply()
+-- Post-hook on the game's restyle of one button (Events.lua).
+function Gap.AfterGameRestyle(button)
+    if Enhancer.BarHalves.Side(button) then
+        if InCombatLockdown() then Enhancer.CombatQueue.Run("gap", placeAllButtons) else Gap.PlaceButton(button) end
+    end
 end

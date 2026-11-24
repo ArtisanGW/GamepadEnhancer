@@ -1,5 +1,5 @@
--- The addon's events: settings on load, the gap once the controller's bars exist
--- and again each time they show, and changes held back in combat after it.
+-- The addon's events: settings on load, the gap once the controller's bars exist,
+-- and changes held back in combat after it.
 local addonName, Enhancer = ...
 
 local BARS_ADDON_NAME = "Blizzard_GamepadActionBars"
@@ -7,16 +7,14 @@ local eventFrame = CreateFrame("Frame")
 local hookedRoot = false
 
 -- Re-applies the gap when the controller's bars show (after a switch to the
--- controller UI) and after the game lays them out again (post-hooks only).
+-- controller UI) and after the game restyles a button (post-hooks only).
 local function hookBarsRoot()
-    local root = _G[Enhancer.SideBars.ROOT_FRAME_NAME]
-    local pageUnit = Enhancer.SideBars.PageUnit()
-    if hookedRoot or not pageUnit or root:IsForbidden() then return end
+    local root = _G.GamepadMainActionBarFrame
+    local styleUtility = _G.GamepadActionBarStyleUtil
+    if hookedRoot or type(root) ~= "table" or root:IsForbidden() or type(styleUtility) ~= "table" then return end
     hookedRoot = true
     root:HookScript("OnShow", function() Enhancer.Gap.Apply() end)
-    if type(pageUnit.RefreshCompactLayout) == "function" then
-        hooksecurefunc(pageUnit, "RefreshCompactLayout", function() Enhancer.Gap.AfterGameLayout() end)
-    end
+    hooksecurefunc(styleUtility, "ApplyExtraButtonStyles", function(button) Enhancer.Gap.AfterGameRestyle(button) end)
 end
 
 eventFrame:RegisterEvent("ADDON_LOADED")

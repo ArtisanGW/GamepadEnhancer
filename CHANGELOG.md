@@ -1,4 +1,4 @@
 # Gamepad Enhancer
 
 ## Unreleased
-- New: widen the gap between each controller action bar's left and right buttons (Options > AddOns > Gamepad Enhancer, or /gpe).
+- New: split each controller action bar into its left and right halves, with a gap you choose (Options > AddOns > Gamepad Enhancer, or /gpe). In a fight the game puts the buttons back; the gap returns when it ends.

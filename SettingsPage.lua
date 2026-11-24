@@ -26,13 +26,13 @@ function SettingsPage.Register()
 
     local variableName = "GamepadEnhancer_gap"
     local setting = Settings.RegisterAddOnSetting(category, variableName, "gap", settings, Settings.VarType.Number,
-        "Gap between side bars", Enhancer.SavedSettings.DEFAULTS.gap)
+        "Gap between halves", Enhancer.SavedSettings.DEFAULTS.gap)
     Settings.SetOnValueChangedCallback(variableName, function() Enhancer.Gap.Apply() end)
     Settings.CreateSlider(category, setting,
         sliderOptions(Enhancer.Gap.MINIMUM, Enhancer.Gap.MAXIMUM, Enhancer.Gap.STEP, pixelsLabel),
-        "Moves the left and right action bars apart.\n\n"
-        .. "The layout stays centered. Off is the game's own layout. "
-        .. "With the compact layout (Edit Mode) all bars share one place, so the gap has no effect.")
+        "Moves each action bar's left and right buttons apart.\n\n"
+        .. "The bar stays centered. Off is the game's own layout. "
+        .. "In a fight the game puts the buttons back; the gap returns when it ends.")
 
     Settings.RegisterAddOnCategory(category)
 end
