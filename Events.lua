@@ -6,12 +6,17 @@ local BARS_ADDON_NAME = "Blizzard_GamepadActionBars"
 local eventFrame = CreateFrame("Frame")
 local hookedRoot = false
 
--- Re-applies the gap when the controller's bars show (after a switch to the controller UI).
+-- Re-applies the gap when the controller's bars show (after a switch to the
+-- controller UI) and after the game lays them out again (post-hooks only).
 local function hookBarsRoot()
-    local root = _G[Enhancer.BarHalves.ROOT_FRAME_NAME]
-    if hookedRoot or type(root) ~= "table" or root:IsForbidden() then return end
+    local root = _G[Enhancer.SideBars.ROOT_FRAME_NAME]
+    local pageUnit = Enhancer.SideBars.PageUnit()
+    if hookedRoot or not pageUnit or root:IsForbidden() then return end
     hookedRoot = true
     root:HookScript("OnShow", function() Enhancer.Gap.Apply() end)
+    if type(pageUnit.RefreshCompactLayout) == "function" then
+        hooksecurefunc(pageUnit, "RefreshCompactLayout", function() Enhancer.Gap.AfterGameLayout() end)
+    end
 end
 
 eventFrame:RegisterEvent("ADDON_LOADED")

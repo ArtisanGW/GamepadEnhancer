@@ -20,6 +20,7 @@ local function newFrame(parent)
     local frame = { children = {}, points = {}, setPointCalls = 0, scripts = {}, events = {} }
     function frame:GetChildren() return unpack(self.children) end
     function frame:IsForbidden() return false end
+    function frame:GetNumPoints() return #self.points end
     function frame:GetPoint(index) local point = self.points[index or 1]; if point then return unpack(point, 1, 5) end end
     function frame:ClearAllPoints() self.points = {} end
     function frame:SetPoint(...) self.setPointCalls = self.setPointCalls + 1; self.points[#self.points + 1] = { ... } end
@@ -31,13 +32,20 @@ local function newFrame(parent)
     return frame
 end
 
--- A bar like GamepadActionBarTemplate: .Left anchored LEFT, .Right anchored RIGHT.
-local function newBar(parent)
-    local bar = newFrame(parent)
-    bar.Left = newFrame(bar); bar.Left.ActionButton1 = newFrame(bar.Left); bar.Left:SetPoint("LEFT", bar, "LEFT", 0, 0)
-    bar.Right = newFrame(bar); bar.Right.ActionButton1 = newFrame(bar.Right); bar.Right:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
-    bar.Left.setPointCalls, bar.Right.setPointCalls = 0, 0
-    return bar
+-- A page unit like GamepadActionBarPageUnitTemplate: side anchors at -195 / +195.
+local function newPageUnit(parent)
+    local pageUnit = newFrame(parent)
+    pageUnit.LeftCenteredAnchor = newFrame(pageUnit); pageUnit.LeftCenteredAnchor:SetPoint("CENTER", nil, nil, -195, 0)
+    pageUnit.RightCenteredAnchor = newFrame(pageUnit); pageUnit.RightCenteredAnchor:SetPoint("CENTER", nil, nil, 195, 0)
+    pageUnit.LeftCenteredAnchor.setPointCalls, pageUnit.RightCenteredAnchor.setPointCalls = 0, 0
+    pageUnit.compact = false
+    function pageUnit:ShouldUseCompactLayout() return self.compact end
+    function pageUnit:RefreshCompactLayout()   -- as the game: its own places back
+        for anchor, x in pairs({ [self.LeftCenteredAnchor] = -195, [self.RightCenteredAnchor] = 195 }) do
+            anchor:ClearAllPoints(); anchor:SetPoint("CENTER", nil, nil, x, 0)
+        end
+    end
+    return pageUnit
 end
 
 local function boot(saved)
@@ -48,9 +56,13 @@ local function boot(saved)
     _G.CreateFrame = function() return newFrame(nil) end
     _G.Settings = nil
     _G.SlashCmdList = {}
+    _G.hooksecurefunc = function(owner, methodName, hook)
+        local original = owner[methodName]
+        owner[methodName] = function(...) local results = { original(...) }; hook(...); return unpack(results) end
+    end
     local root = newFrame(nil)
-    local pageUnit = newFrame(root)
-    game.topBar, game.bottomBar = newBar(pageUnit), newBar(pageUnit)
+    root.PageUnit = newPageUnit(root)
+    game.left, game.right = root.PageUnit.LeftCenteredAnchor, root.PageUnit.RightCenteredAnchor
     _G.GamepadMainActionBarFrame = root
     local addonTable = {}
     for _, fileName in ipairs(TOC_FILES) do assert(loadfile(fileName))("GamepadEnhancer", addonTable) end
@@ -72,31 +84,30 @@ local function startGame(saved)
     return addon
 end
 
+local function x(frame) return select(4, frame:GetPoint(1)) end
+
 test("defaults leave the game's bars untouched", function()
     startGame(nil)
     expectEqual(_G.GamepadEnhancerDB.gap, 0, "default gap")
-    expectEqual(game.topBar.Left.setPointCalls, 0, "left half")
-    expectEqual(game.topBar.Right.setPointCalls, 0, "right half")
+    expectEqual(game.left.setPointCalls, 0, "left bar")
+    expectEqual(game.right.setPointCalls, 0, "right bar")
 end)
 
-test("a saved gap moves every bar's halves apart, centered", function()
+test("a saved gap moves the side bars apart, centered", function()
     startGame({ gap = 200 })
-    for _, bar in ipairs({ game.topBar, game.bottomBar }) do
-        local point, relativeTo, relativePoint, x = bar.Left:GetPoint(1)
-        expectEqual(point, "LEFT"); expectEqual(relativeTo, bar); expectEqual(relativePoint, "LEFT")
-        expectEqual(x, -100, "left half")
-        expectEqual(select(4, bar.Right:GetPoint(1)), 100, "right half")
-    end
+    expectEqual(x(game.left), -295, "left bar")
+    expectEqual(x(game.right), 295, "right bar")
+    expectEqual((game.left:GetPoint(1)), "CENTER", "same anchor point")
 end)
 
-test("changing the gap starts from the game's anchor each time", function()
+test("changing the gap starts from the game's place each time", function()
     local addon = startGame({ gap = 100 })
     _G.GamepadEnhancerDB.gap = 40
     addon.Gap.Apply()
-    expectEqual(select(4, game.topBar.Left:GetPoint(1)), -20)
+    expectEqual(x(game.left), -215)
     _G.GamepadEnhancerDB.gap = 0
     addon.Gap.Apply()
-    expectEqual(select(4, game.topBar.Left:GetPoint(1)), 0, "back to the game's place")
+    expectEqual(x(game.left), -195, "back to the game's place")
 end)
 
 test("in combat the gap waits until combat ends", function()
@@ -104,17 +115,25 @@ test("in combat the gap waits until combat ends", function()
     game.combat = true
     _G.GamepadEnhancerDB.gap = 60
     addon.Gap.Apply()
-    expectEqual(game.topBar.Left.setPointCalls, 0, "nothing moved in combat")
+    expectEqual(game.left.setPointCalls, 0, "nothing moved in combat")
     game.combat = false
     fire("PLAYER_REGEN_ENABLED")
-    expectEqual(select(4, game.topBar.Left:GetPoint(1)), -30, "moved after combat")
+    expectEqual(x(game.left), -225, "moved after combat")
 end)
 
-test("the bars showing again re-apply the gap", function()
+test("the game laying its bars out again keeps the gap", function()
     startGame({ gap = 50 })
-    game.topBar.Left:ClearAllPoints(); game.topBar.Left:SetPoint("LEFT", game.topBar, "LEFT", 0, 0)
+    _G.GamepadMainActionBarFrame.PageUnit:RefreshCompactLayout()
+    expectEqual(x(game.right), 220)
+end)
+
+test("the compact layout is left to the game", function()
+    startGame({ gap = 50 })
+    local pageUnit = _G.GamepadMainActionBarFrame.PageUnit
+    pageUnit.compact = true
+    local calls = game.left.setPointCalls
     _G.GamepadMainActionBarFrame.scripts.OnShow()
-    expectEqual(select(4, game.topBar.Left:GetPoint(1)), -25)
+    expectEqual(game.left.setPointCalls, calls, "not moved in compact layout")
 end)
 
 test("/gpe reset puts the game's layout back", function()
@@ -123,7 +142,7 @@ test("/gpe reset puts the game's layout back", function()
     _G.SlashCmdList.GAMEPADENHANCER("reset")
     _G.print = print
     expectEqual(_G.GamepadEnhancerDB.gap, 0)
-    expectEqual(select(4, game.topBar.Right:GetPoint(1)), 0)
+    expectEqual(x(game.right), 195)
 end)
 
 print(string.format("%d passed, %d failed", passed, failed))
