@@ -9,13 +9,13 @@ In Bear Form, Maul is always reported as in range of the current target, even wh
 
 ## Spells involved
 
-| Spell | Spell ID (Classic Era rank 1, for reference) | Range | Behaviour |
+| Spell | Spell ID (from the forever client) | Range | Behaviour |
 |---|---|---|---|
-| Maul | [6807](https://www.wowhead.com/classic/spell=6807) | 0–0 yd, flag "On next swing" | **Wrong:** in range at any distance |
-| Swipe | [779](https://www.wowhead.com/classic/spell=779) | 0–0 yd | Correct |
-| Moonfire | [8921](https://www.wowhead.com/classic/spell=8921) | 0–30 yd | Correct (control) |
+| Maul | 6808 (Classic Era: [Maul 6808](https://www.wowhead.com/classic/spell=6808)) | 0–0 yd, flag "On next swing" | **Wrong:** in range at any distance |
+| Swipe | 779 (Classic Era: [Swipe 779](https://www.wowhead.com/classic/spell=779)) | 0–0 yd | Correct |
+| Moonfire | 8925 (Classic Era: [Moonfire 8925](https://www.wowhead.com/classic/spell=8925)) | 0–30 yd | Correct (control) |
 
-No public spell database covers World of Warcraft (forever), so these IDs are the Classic Era rank 1 IDs from Wowhead, for reference. The forever client may use other IDs or ranks.
+The IDs were read from the forever client (`GetActionInfo`). No public spell database covers the forever client; the links go to the same IDs in Wowhead's Classic Era database for reference.
 
 ## Steps to reproduce
 
