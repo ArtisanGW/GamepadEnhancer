@@ -1,9 +1,13 @@
--- Whether your target is in range of a spell on the controller's action bars:
--- the game's own range check for each bar button's action slot
--- (C_ActionBar.IsActionInRange, nil when there's no target to check).
+-- Whether your target is in range of a spell on the controller's action bars.
+-- Read from the game's range event (ACTION_RANGE_CHECK_UPDATE), the same signal
+-- behind the red range dots on the buttons; the game turns the check on for
+-- every shown bar button (ActionButton.lua:403). Asking C_ActionBar.IsActionInRange
+-- directly said Maul was in range from any distance (seen in game, 2026-11-24).
 local _, Enhancer = ...
 
-local SpellRange = {}
+local SpellRange = {
+    inRangeBySlot = {},   -- action slot -> true while the game says the target is in range
+}
 Enhancer.SpellRange = SpellRange
 
 -- Spells with no range (forms like Bear Form, self buffs) count as in range at
@@ -16,18 +20,27 @@ local function isSpellWithoutRange(action)
     return succeeded and hasRange == false
 end
 
-local function actionInRange(action)
-    if type(action) ~= "number" or not C_ActionBar or not C_ActionBar.IsActionInRange then return false end
-    if isSpellWithoutRange(action) then return false end
-    local succeeded, inRange = pcall(C_ActionBar.IsActionInRange, action, "target")
-    return succeeded and inRange == true
+-- What the range event last said for this action slot.
+function SpellRange.SlotInRange(action)
+    return type(action) == "number" and SpellRange.inRangeBySlot[action] == true and not isSpellWithoutRange(action)
 end
 
 -- True when a target exists and a button of a shown bar has an action that reaches it.
 function SpellRange.TargetInRange()
     if not UnitExists("target") then return false end
     for _, button in ipairs(Enhancer.BarHalves.AllButtons()) do
-        if button:IsVisible() and actionInRange(button.action) then return true end
+        if button:IsVisible() and SpellRange.SlotInRange(button.action) then return true end
     end
     return false
 end
+
+local listener = CreateFrame("Frame")
+listener:RegisterEvent("ACTION_RANGE_CHECK_UPDATE")
+listener:RegisterEvent("PLAYER_TARGET_CHANGED")
+listener:SetScript("OnEvent", function(_, event, slot, isInRange, checksRange)
+    if event == "PLAYER_TARGET_CHANGED" then
+        SpellRange.inRangeBySlot = {}   -- the game sends fresh answers for the new target
+    elseif type(slot) == "number" then
+        SpellRange.inRangeBySlot[slot] = (checksRange and isInRange) and true or nil
+    end
+end)

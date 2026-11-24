@@ -45,7 +45,6 @@ local function boot(saved)
     _G.InCombatLockdown = function() return game.combat end
     _G.geterrorhandler = function() return function(message) game.errors[#game.errors + 1] = message end end
     _G.UnitExists = function() return game.target end
-    _G.C_ActionBar = { IsActionInRange = function(action) return game.inRange[action] end }
     _G.CreateFrame = function() local frame = newFrame(nil); game.frames[#game.frames + 1] = frame; return frame end
     _G.SlashCmdList = {}
     _G.Settings = nil
@@ -69,6 +68,12 @@ local function boot(saved)
     return addonTable
 end
 local function fire(event, ...) game.eventFrame.scripts.OnEvent(game.eventFrame, event, ...) end
+-- The game's range event for action slot 1 (sent to every frame that listens).
+local function rangeEvent(isInRange)
+    for _, frame in ipairs(game.frames) do
+        if frame.events.ACTION_RANGE_CHECK_UPDATE then frame.scripts.OnEvent(frame, "ACTION_RANGE_CHECK_UPDATE", 1, isInRange, true) end
+    end
+end
 
 test("off by default: nothing faded", function()
     boot(nil)
@@ -89,10 +94,13 @@ test("a target: 20%; in range of a bar spell: 50% (defaults)", function()
     game.target = true
     addon.OutOfCombatFade.Apply()
     expectEqual(game.bar.alpha, 0.2, "target out of range")
-    game.inRange[1] = true
+    rangeEvent(true)
     addon.OutOfCombatFade.Apply()
     expectEqual(game.bar.alpha, 0.5, "in range")
-    game.target, game.inRange[1] = false, nil
+    rangeEvent(false)
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.bar.alpha, 0.2, "out of range again")
+    game.target = false
     addon.OutOfCombatFade.Apply()
     expectEqual(game.bar.alpha, 0, "no target")
 end)
@@ -139,7 +147,8 @@ test("a spell with no range (a form) doesn't count as in range", function()
     _G.GetActionInfo = function() return "spell", 5487 end
     _G.C_Spell = { SpellHasRange = function() return false end }
     fire("ADDON_LOADED", "GamepadEnhancer")
-    game.target, game.inRange[1] = true, true
+    game.target = true
+    rangeEvent(true)
     addon.OutOfCombatFade.Apply()
     expectEqual(game.bar.alpha, 0.2, "the 'with a target' look, not 'in range'")
     _G.GetActionInfo, _G.C_Spell = nil, nil

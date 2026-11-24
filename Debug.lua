@@ -245,7 +245,8 @@ function Debug.RecordTriggers()
 end
 
 -- /gpe debug range: 30 s log of the game's range answers for each shown bar
--- spell (for "Maul makes In range wrong"). A line only when something changed.
+-- spell (for "Maul makes In range wrong"): asked / from the range event / has a
+-- range. A line only when something changed.
 function Debug.RecordRange()
     if running then print("Gamepad Enhancer check: already running.") return end
     if type(_G.GamepadEnhancerDebugDB) ~= "table" then _G.GamepadEnhancerDebugDB = {} end
@@ -262,7 +263,8 @@ function Debug.RecordRange()
             if button:IsVisible() and type(button.action) == "number" then
                 local actionType, id = GetActionInfo(button.action)
                 if actionType then
-                    local inRange = C_ActionBar.IsActionInRange(button.action, "target")
+                    local inRange = tostring(C_ActionBar.IsActionInRange(button.action, "target"))
+                        .. "/ev:" .. tostring(Enhancer.SpellRange.inRangeBySlot[button.action] == true)
                     local hasRange = "-"
                     if actionType == "spell" and C_Spell and C_Spell.SpellHasRange then hasRange = tostring(C_Spell.SpellHasRange(id)) end
                     parts[#parts + 1] = string.format("%s=%s/r:%s", actionType == "spell" and tostring(spellName(id)) or actionType .. tostring(id),
