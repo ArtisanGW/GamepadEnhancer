@@ -274,7 +274,7 @@ function Debug.RecordRange()
                         hasRange = string.format("%s/sp:%s/yd:%s-%s", hasRange, tostring(spellInRange),
                             tostring(info and info.minRange), tostring(info and info.maxRange))
                     end
-                    parts[#parts + 1] = string.format("%s=%s/r:%s", actionType == "spell" and tostring(spellName(id)) or actionType .. tostring(id),
+                    parts[#parts + 1] = string.format("%s=%s/r:%s", actionType == "spell" and (tostring(spellName(id)) .. "#" .. tostring(id)) or actionType .. tostring(id),
                         tostring(inRange), hasRange)
                 end
             end
