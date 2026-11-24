@@ -2,5 +2,6 @@ std = "lua51"
 max_line_length = false
 globals = { "GamepadEnhancerDB", "GamepadEnhancerDebugDB", "SLASH_GAMEPADENHANCER1", "SLASH_GAMEPADENHANCER2", "SlashCmdList" }
 read_globals = { "InCombatLockdown", "geterrorhandler", "CreateFrame", "hooksecurefunc", "Settings", "MinimalSliderWithSteppersMixin", "UIParent", "SecureHandlerWrapScript",
-    "GamepadActionBarStyleUtil", "GetTime", "date", "RELOADUI", "LATER" }
+    "GamepadActionBarStyleUtil", "GetTime", "date", "RELOADUI", "LATER", "debugstack",
+    "IsShiftKeyDown", "IsControlKeyDown", "IsAltKeyDown" }
 exclude_files = { "tests" }

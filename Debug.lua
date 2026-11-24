@@ -98,22 +98,48 @@ local function installWrappers()
     local wrapped, failures = 0, 0
     for _, entry in ipairs(testButtons) do
         entry.button:SetAttribute("gpe-shift", entry.shift)
+        entry.button:HookScript("OnAttributeChanged", function(self, name)
+            if name == "gpe-lastx" then self.gpeWrapperMoveTime = GetTime() end
+        end)
         local succeeded = pcall(SecureHandlerWrapScript, entry.button, "OnClick", header, [[ return nil, "split" ]], POST_CLICK)
         if succeeded then wrapped = wrapped + 1 else failures = failures + 1 end
     end
     record("secure click wrappers installed", failures == 0, wrapped .. " wrapped, " .. failures .. " failed")
     -- Out of combat the game's own restyle is followed at once (a plain post-hook).
     if type(GamepadActionBarStyleUtil) ~= "table" then record("game's button styling found", false, "GamepadActionBarStyleUtil missing") return end
-    hooksecurefunc(GamepadActionBarStyleUtil, "ApplyExtraButtonStyles", function(button)
+    hooksecurefunc(GamepadActionBarStyleUtil, "ApplyExtraButtonStyles", function(button, actionState, focusState)
         for _, entry in ipairs(testButtons) do
-            if entry.button == button then shiftNow(entry) end
+            if entry.button == button then
+                if InCombatLockdown() then Debug.RecordRestyle(entry, actionState, focusState) end
+                shiftNow(entry)
+            end
         end
     end)
     for _, entry in ipairs(testButtons) do shiftNow(entry) end
 end
 
+-- In combat: which game code moved a test button back, in what state, and
+-- whether the click wrapper had just moved it (within 0.1 s).
+function Debug.RecordRestyle(entry, actionState, focusState)
+    -- The calling lines, file:line in function, newest first.
+    local stack = (debugstack(2, 6, 0) or ""):gsub("Interface/AddOns/", ""):gsub("\n", " < ")
+    local key = stack:sub(1, 400)
+    results.restyleCallers[key] = (results.restyleCallers[key] or 0) + 1
+    local stateKey = tostring(actionState) .. "/" .. tostring(focusState)
+    results.restyleStates[stateKey] = (results.restyleStates[stateKey] or 0) + 1
+    results.restylesInCombat = results.restylesInCombat + 1
+    local lastWrapperMove = entry.button.gpeWrapperMoveTime
+    if lastWrapperMove and GetTime() - lastWrapperMove < 0.1 then
+        results.restylesRightAfterWrapper = results.restylesRightAfterWrapper + 1
+    end
+end
+
 -- One sample: how many shown test buttons are still split.
 local function sample()
+    if IsShiftKeyDown() then results.modifierSamples.shift = results.modifierSamples.shift + 1 end
+    if IsControlKeyDown() then results.modifierSamples.control = results.modifierSamples.control + 1 end
+    if IsAltKeyDown() then results.modifierSamples.alt = results.modifierSamples.alt + 1 end
+    results.modifierSamples.total = results.modifierSamples.total + 1
     for _, entry in ipairs(testButtons) do
         if entry.button:IsVisible() then
             local x = select(4, entry.button:GetPoint(1))
@@ -156,6 +182,11 @@ local function finish(reason)
         record("buttons stayed split in combat", total > 0 and results.combatUnsplit == 0,
             results.combatSplit .. " split / " .. results.combatUnsplit .. " unsplit samples")
         record("no blocked actions", #results.blocked == 0, #results.blocked .. " blocked")
+        record("game restyles seen in combat (info)", true, results.restylesInCombat .. " restyles, "
+            .. results.restylesRightAfterWrapper .. " within 0.1 s after the wrapper")
+        local modifiers = results.modifierSamples
+        record("modifier keys held during the fight (info)", true, string.format("shift %d, ctrl %d, alt %d of %d samples",
+            modifiers.shift, modifiers.control, modifiers.alt, modifiers.total))
         record("spells still cast in combat", results.castsInCombat > 0, results.castsInCombat .. " casts")
     else
         record("a fight happened", false, "no combat within " .. Debug.WAIT_FOR_COMBAT .. " s")
@@ -169,7 +200,9 @@ function Debug.Start()
     if InCombatLockdown() then print("Gamepad Enhancer probe: start it out of combat.") return end
     if probe then print("Gamepad Enhancer probe: already ran; reload first.") return end
     _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), checks = {}, blocked = {},
-        combatSplit = 0, combatUnsplit = 0, castsInCombat = 0, wrapRunsInCombat = 0 }
+        combatSplit = 0, combatUnsplit = 0, castsInCombat = 0, wrapRunsInCombat = 0,
+        restyleCallers = {}, restyleStates = {}, restylesInCombat = 0, restylesRightAfterWrapper = 0,
+        modifierSamples = { shift = 0, control = 0, alt = 0, total = 0 } }
     results = _G.GamepadEnhancerDebugDB
     testButtons = collectButtons()
     staticChecks()
