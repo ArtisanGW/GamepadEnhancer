@@ -2,6 +2,8 @@ package-as: GamepadEnhancer
 
 ignore:
   - tests
+  # /gpe debug, the in-game check
+  - Debug.lua
   - CURSEFORGE.md
 
 manual-changelog:

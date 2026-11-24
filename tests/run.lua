@@ -11,53 +11,111 @@ end
 
 local TOC_FILES = {}
 for line in io.lines("GamepadEnhancer.toc") do
-    if line:match("%.lua%s*$") and not line:match("^#") then TOC_FILES[#TOC_FILES + 1] = line:match("^%s*(.-)%s*$") end
+    if line:match("%.lua%s*$") and not line:match("^#") and not line:match("Debug%.lua") then
+        TOC_FILES[#TOC_FILES + 1] = line:match("^%s*(.-)%s*$")
+    end
 end
 
 local game
+local function newFrame(parent)
+    local frame = { parent = parent, children = {}, regions = {}, alpha = 1, events = {}, scripts = {} }
+    if parent then parent.children[#parent.children + 1] = frame end
+    function frame:GetParent() return self.parent end
+    function frame:GetChildren() return unpack(self.children) end
+    function frame:GetRegions() return unpack(self.regions) end
+    function frame:IsForbidden() return false end
+    function frame:IsVisible() return true end
+    function frame:GetAlpha() return self.alpha end
+    function frame:SetAlpha(alpha) self.alpha = alpha end
+    function frame:GetNumPoints() return 1 end
+    function frame:GetPoint() return "CENTER", self.parent, "CENTER", 0, 0 end
+    function frame:RegisterEvent(event) self.events[event] = true end
+    function frame:SetScript(script, handler) self.scripts[script] = handler end
+    function frame:HookScript(script, handler) self.scripts[script] = handler end
+    return frame
+end
+
 local function boot(saved)
-    game = { combat = false, errors = {} }
+    game = { combat = false, errors = {}, frames = {}, target = false, inRange = {} }
     _G.GamepadEnhancerDB = saved
     _G.InCombatLockdown = function() return game.combat end
     _G.geterrorhandler = function() return function(message) game.errors[#game.errors + 1] = message end end
-    _G.CreateFrame = function()
-        local frame = { events = {} }
-        function frame:RegisterEvent(event) self.events[event] = true end
-        function frame:SetScript(_, handler) self.onEvent = handler end
-        game.eventFrame = frame
-        return frame
-    end
+    _G.UnitExists = function() return game.target end
+    _G.C_ActionBar = { IsActionInRange = function(action) return game.inRange[action] end }
+    _G.CreateFrame = function() local frame = newFrame(nil); game.frames[#game.frames + 1] = frame; return frame end
     _G.SlashCmdList = {}
+    _G.Settings = nil
+    -- The controller's bars: the main frame with a decoration, the page unit
+    -- (holding the shoulder textures) and one bar with a left and right half.
+    local root = newFrame(nil)
+    root.regions[1] = newFrame(nil)
+    local pageUnit = newFrame(root)
+    pageUnit.LeftShoulderBackground = newFrame(nil)
+    pageUnit.regions[1] = pageUnit.LeftShoulderBackground
+    root.PageUnit = pageUnit
+    local bar = newFrame(pageUnit)
+    bar.Left, bar.Right = newFrame(bar), newFrame(bar)
+    local button = newFrame(bar.Left); button.action = 1; bar.Left.ActionButton1 = button
+    _G.GamepadMainActionBarFrame = root
+    game.root, game.pageUnit, game.bar, game.decoration = root, pageUnit, bar, root.regions[1]
     local addonTable = {}
     for _, fileName in ipairs(TOC_FILES) do assert(loadfile(fileName))("GamepadEnhancer", addonTable) end
+    game.eventFrame = game.frames[#game.frames]
     return addonTable
 end
-local function fire(event, ...) game.eventFrame.onEvent(game.eventFrame, event, ...) end
+local function fire(event, ...) game.eventFrame.scripts.OnEvent(game.eventFrame, event, ...) end
 
-test("settings are created on load", function()
+test("off by default: nothing faded", function()
     boot(nil)
-    fire("ADDON_LOADED", "GamepadEnhancer")
-    expectEqual(_G.GamepadEnhancerDB.version, 1)
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    expectEqual(game.bar.alpha, 1); expectEqual(game.decoration.alpha, 1)
 end)
 
-test("a change asked for in combat runs when combat ends", function()
+test("on: hidden out of combat, shoulder icons stay", function()
+    boot({ hideOutOfCombat = true })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    expectEqual(game.bar.alpha, 0, "bar"); expectEqual(game.decoration.alpha, 0, "decoration")
+    expectEqual(game.pageUnit.alpha, 1, "page unit"); expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 1, "shoulder")
+end)
+
+test("target in range of a bar spell: the faded look (20% by default)", function()
+    local addon = boot({ hideOutOfCombat = true })
+    fire("ADDON_LOADED", "GamepadEnhancer")
+    game.target, game.inRange[1] = true, true
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.bar.alpha, 0.2)
+    game.inRange[1] = false
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.bar.alpha, 0, "out of range again")
+end)
+
+test("a fight brings everything back, its end hides it again", function()
+    boot({ hideOutOfCombat = true })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    fire("PLAYER_REGEN_DISABLED"); game.combat = true
+    expectEqual(game.bar.alpha, 1, "in combat")
+    game.combat = false; fire("PLAYER_REGEN_ENABLED")
+    expectEqual(game.bar.alpha, 0, "after combat")
+end)
+
+test("turning it off puts the game's alpha back", function()
+    local addon = boot({ hideOutOfCombat = true })
+    game.decoration.alpha = 0.7
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    _G.GamepadEnhancerDB.hideOutOfCombat = false
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.decoration.alpha, 0.7)
+end)
+
+test("a change asked for in combat runs when combat ends; errors go to the handler", function()
     local addon = boot(nil)
     local ran = 0
     game.combat = true
-    expectEqual(addon.CombatQueue.Run("change", function() ran = ran + 1 end), false)
-    expectEqual(ran, 0, "waits in combat")
-    game.combat = false
-    fire("PLAYER_REGEN_ENABLED")
-    expectEqual(ran, 1, "ran after combat")
-end)
-
-test("an error in a waiting change goes to the error handler", function()
-    local addon = boot(nil)
-    game.combat = true
+    addon.CombatQueue.Run("change", function() ran = ran + 1 end)
     addon.CombatQueue.Run("broken", function() error("boom") end)
-    game.combat = false
-    fire("PLAYER_REGEN_ENABLED")
-    expectEqual(#game.errors, 1)
+    expectEqual(ran, 0, "waits in combat")
+    game.combat = false; fire("PLAYER_REGEN_ENABLED")
+    expectEqual(ran, 1); expectEqual(#game.errors, 1)
 end)
 
 print(string.format("%d passed, %d failed", passed, failed))

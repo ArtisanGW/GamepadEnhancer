@@ -1,12 +1,25 @@
 ## Interface: 16001
 ## Title: Gamepad Enhancer
-## Notes: Customizes the controller's action bars.
+## Notes: Customizes the controller's action bars. Hides them out of combat but for the shoulder icons, faded while your target is in range. Settings in Options > AddOns > Gamepad Enhancer, or /gpe.
 ## Author: Artisan
 ## Version: @project-version@
-## SavedVariables: GamepadEnhancerDB
+#@debug@
+## SavedVariables: GamepadEnhancerDB, GamepadEnhancerDebugDB
+#@end-debug@
+#@non-debug@
+# ## SavedVariables: GamepadEnhancerDB
+#@end-non-debug@
 ## Category: Gamepad
 
 SavedSettings.lua
 CombatQueue.lua
+BarHalves.lua
+SpellRange.lua
+OutOfCombatFade.lua
+SettingsPage.lua
 SlashCommand.lua
 Events.lua
+#@do-not-package@
+# Development builds only: left out of the release (.pkgmeta)
+Debug.lua
+#@end-do-not-package@

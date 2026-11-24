@@ -4,7 +4,10 @@ local _, Enhancer = ...
 
 local SavedSettings = {
     VERSION = 1,
-    DEFAULTS = {},
+    DEFAULTS = {
+        hideOutOfCombat = false,   -- the game shows its bars all the time
+        fadedOpacity = 20,         -- % opacity out of combat while a spell is in range
+    },
 }
 Enhancer.SavedSettings = SavedSettings
 
