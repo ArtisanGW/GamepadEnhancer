@@ -47,3 +47,7 @@ Logged in game every 0.25 s while walking from about 30 yards to melee, target f
 
 - The action button's range indicator is wrong for Maul.
 - Addons that read the game's range APIs or range event to judge distance to the target get a wrong answer.
+
+## Contact
+
+You can reach me at blizz (a) dauw.cc.
