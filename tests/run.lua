@@ -64,7 +64,7 @@ local function boot(saved)
     local addonTable = {}
     for _, fileName in ipairs(TOC_FILES) do assert(loadfile(fileName))("GamepadEnhancer", addonTable) end
     game.eventFrame = game.frames[#game.frames]
-    game.fadeDriver = game.frames[1]
+    for _, frame in ipairs(game.frames) do if frame.scripts.OnUpdate and not frame.events.ACTION_RANGE_CHECK_UPDATE and frame ~= game.frames[#game.frames] then game.fadeDriver = game.fadeDriver or frame end end
     return addonTable
 end
 local function fire(event, ...) game.eventFrame.scripts.OnEvent(game.eventFrame, event, ...) end
