@@ -44,7 +44,7 @@ local function isSplit(button, gap)
     local moved = Enhancer.Gap.moved[button]
     local side = Enhancer.BarHalves.Side(button)
     local point, relativeTo, _, x = button:GetPoint(1)
-    local split = moved and side and x and x == moved.x and moved.shift == side * gap / 2
+    local split = moved and side and Enhancer.Gap.IsWhereWePutIt(button, x) and moved.shift == side * gap / 2
     if not split and not results.failures[button] then
         results.failures[button] = true
         local parent = button:GetParent()

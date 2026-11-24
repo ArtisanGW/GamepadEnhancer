@@ -13,8 +13,17 @@ local Gap = {
     MAXIMUM = 400,
     STEP = 2,
     moved = setmetatable({}, { __mode = "k" }),   -- button -> { x = x we set, shift = shift in it }
+    -- The game stores anchor offsets as 32-bit floats: what GetPoint gives back
+    -- differs from what was set by up to about 0.00002 (seen in game).
+    SAME_X_TOLERANCE = 0.01,
 }
 Enhancer.Gap = Gap
+
+-- Whether x is (still) where we put the button.
+function Gap.IsWhereWePutIt(button, x)
+    local moved = Gap.moved[button]
+    return moved ~= nil and x ~= nil and math.abs(x - moved.x) < Gap.SAME_X_TOLERANCE
+end
 
 local function currentShift(button)
     local side = Enhancer.BarHalves.Side(button)
@@ -29,7 +38,7 @@ function Gap.PlaceButton(button)
     if not point then return end
     local moved = Gap.moved[button]
     local gameX = x
-    if moved and moved.x == x then gameX = x - moved.shift end   -- still where we put it
+    if Gap.IsWhereWePutIt(button, x) then gameX = x - moved.shift end   -- still where we put it
     local shift = currentShift(button)
     if shift == 0 and not moved then return end   -- leave the game's frames untouched
     local newX = gameX + shift

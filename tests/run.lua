@@ -146,6 +146,15 @@ test("buttons outside a bar's halves are left alone", function()
     expectEqual(x(other), 5)
 end)
 
+test("the game's float rounding doesn't add the gap twice", function()
+    local addon = startGame({ gap = 100 })
+    -- As in game: GetPoint gives back the stored x slightly off (32-bit float).
+    local point, relativeTo, relativePoint, storedX, y = game.left:GetPoint(1)
+    game.left.points[1] = { point, relativeTo, relativePoint, storedX + 0.00002, y }
+    addon.Gap.Apply()
+    expectEqual(math.floor(x(game.left) + 0.5), -100, "still one gap from the game's place")
+end)
+
 test("/gpe reset puts the game's layout back", function()
     startGame({ gap = 80 })
     _G.print = function() end
