@@ -175,7 +175,7 @@ function Debug.Start()
             showReloadBox(string.format("Gamepad Enhancer check: %d passed, %d failed.\n\nReload to save the findings.", passed, failed))
         end
     end)
-    print("Gamepad Enhancer check: walk through hidden, faded and fight (see the top left).")
+    print("Gamepad Enhancer check: walk through hidden, target, in range and fight (see the top left).")
 end
 
 -- /gpe debug lt: 60 s recording of every alpha change on the controller bars,
@@ -186,8 +186,8 @@ function Debug.RecordTriggers()
     _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), recording = {} }
     local recording = _G.GamepadEnhancerDebugDB.recording
     local settings = Enhancer.SavedSettings.Get()
-    recording[1] = string.format("settings: hide %s, faded %s, shoulders %s, fade %s s",
-        tostring(settings.hideOutOfCombat), tostring(settings.fadedOpacity), tostring(settings.shoulderOpacity), tostring(settings.fadeSeconds))
+    recording[1] = string.format("settings: hide %s, with a target %s, in range %s, shoulders %s, fade %s s",
+        tostring(settings.hideOutOfCombat), tostring(settings.fadedOpacity), tostring(settings.inRangeOpacity), tostring(settings.shoulderOpacity), tostring(settings.fadeSeconds))
     local function snapshot()
         local lines = { InCombatLockdown() and "COMBAT" or "out",
             string.format("root %.2f page %.2f", root:GetEffectiveAlpha(), root.PageUnit:GetAlpha()) }
