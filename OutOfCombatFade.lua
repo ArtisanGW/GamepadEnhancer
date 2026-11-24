@@ -1,6 +1,7 @@
 -- Out of combat, hides the controller's action bar frame except its two shoulder
--- icons (the targeting icons at the top), or shows it faded while your target is
--- in range of one of its spells. In a fight it all comes back.
+-- icons (the targeting icons at the top), shows it faded while you have a target,
+-- and less faded while that target is in range of one of its spells. In a fight
+-- it all comes back.
 --
 -- The shoulder icons are textures of the page unit itself (LeftShoulderBackground,
 -- RightShoulderBackground and their icons, MainActionBarFrame.xml in the game's
@@ -37,12 +38,13 @@ function OutOfCombatFade.IsOn()
     return Enhancer.SavedSettings.Get().hideOutOfCombat == true
 end
 
--- The opacity out of combat: the faded look in range of a spell, else hidden.
+-- The opacity out of combat: hidden with no target, the "with a target" look
+-- with one out of range, and the "in range" look when a bar spell reaches it.
 function OutOfCombatFade.TargetAlpha()
-    if Enhancer.SpellRange.TargetInRange() then
-        return (tonumber(Enhancer.SavedSettings.Get().fadedOpacity) or 0) / 100
-    end
-    return 0
+    if not UnitExists("target") then return 0 end
+    local settings = Enhancer.SavedSettings.Get()
+    if Enhancer.SpellRange.TargetInRange() then return (tonumber(settings.inRangeOpacity) or 0) / 100 end
+    return (tonumber(settings.fadedOpacity) or 0) / 100
 end
 
 -- Sets every part to alpha (out of combat only; the original alpha is kept to put back).

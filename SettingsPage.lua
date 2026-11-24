@@ -32,16 +32,24 @@ function SettingsPage.Register()
     Settings.SetOnValueChangedCallback(variableName, function() Enhancer.OutOfCombatFade.Apply() end)
     Settings.CreateCheckbox(category, setting,
         "Hides the controller's action bars when you're not fighting.\n\n"
-        .. "The two shoulder icons stay. The bars show faded while your target is in range of one of their spells, "
+        .. "The two shoulder icons stay. The bars show faded while you have a target, "
         .. "and come back fully when a fight starts.")
 
     local opacityName = "GamepadEnhancer_fadedOpacity"
     local opacitySetting = Settings.RegisterAddOnSetting(category, opacityName, "fadedOpacity", settings,
-        Settings.VarType.Number, "Faded look", Enhancer.SavedSettings.DEFAULTS.fadedOpacity)
+        Settings.VarType.Number, "With a target", Enhancer.SavedSettings.DEFAULTS.fadedOpacity)
     Settings.SetOnValueChangedCallback(opacityName, function() Enhancer.OutOfCombatFade.Apply() end)
     Settings.CreateSlider(category, opacitySetting, sliderOptions(0, 100, 1, percentLabel),
-        "How visible the bars are out of combat while your target is in range.\n\n"
+        "How visible the bars are out of combat while you have a target.\n\n"
         .. "0% keeps them hidden.")
+
+    local inRangeName = "GamepadEnhancer_inRangeOpacity"
+    local inRangeSetting = Settings.RegisterAddOnSetting(category, inRangeName, "inRangeOpacity", settings,
+        Settings.VarType.Number, "In range", Enhancer.SavedSettings.DEFAULTS.inRangeOpacity)
+    Settings.SetOnValueChangedCallback(inRangeName, function() Enhancer.OutOfCombatFade.Apply() end)
+    Settings.CreateSlider(category, inRangeSetting, sliderOptions(0, 100, 1, percentLabel),
+        "How visible the bars are out of combat while your target is in range of one of their spells.\n\n"
+        .. "Set it above \"With a target\" to see them better as you get close.")
 
     local shoulderName = "GamepadEnhancer_shoulderOpacity"
     local shoulderSetting = Settings.RegisterAddOnSetting(category, shoulderName, "shoulderOpacity", settings,

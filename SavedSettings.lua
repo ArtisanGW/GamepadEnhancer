@@ -7,8 +7,9 @@ local SavedSettings = {
     DEFAULTS = {
         hideOutOfCombat = false,   -- the game shows its bars all the time
         shoulderOpacity = 100,     -- % opacity of the shoulder icons out of combat (100 = the game's)
-        fadedOpacity = 20,
-        fadeSeconds = 0.3,         -- seconds a fade in or out takes         -- % opacity out of combat while a spell is in range
+        fadedOpacity = 20,         -- % opacity out of combat with a target out of range
+        inRangeOpacity = 50,       -- % opacity out of combat with the target in range of a bar spell
+        fadeSeconds = 0.3,         -- seconds a fade in or out takes
     },
 }
 Enhancer.SavedSettings = SavedSettings
