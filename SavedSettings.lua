@@ -4,9 +4,7 @@ local _, Enhancer = ...
 
 local SavedSettings = {
     VERSION = 1,
-    DEFAULTS = {
-        gap = 0,   -- extra space between each bar's left and right buttons, in pixels
-    },
+    DEFAULTS = {},
 }
 Enhancer.SavedSettings = SavedSettings
 
