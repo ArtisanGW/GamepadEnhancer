@@ -39,19 +39,31 @@ local function showReloadBox(text)
 end
 
 -- Split: the button is where Gap.lua last put it, with this gap's shift.
+-- A button that isn't is recorded once, with what was found.
 local function isSplit(button, gap)
     local moved = Enhancer.Gap.moved[button]
     local side = Enhancer.BarHalves.Side(button)
-    local x = select(4, button:GetPoint(1))
-    if not (moved and side and x) then return false end
-    return x == moved.x and moved.shift == side * gap / 2
+    local point, relativeTo, _, x = button:GetPoint(1)
+    local split = moved and side and x and x == moved.x and moved.shift == side * gap / 2
+    if not split and not results.failures[button] then
+        results.failures[button] = true
+        local parent = button:GetParent()
+        results.failureDetails[#results.failureDetails + 1] = string.format(
+            "%s | type %s | side %s | point %s to %s | x %s | moved x %s shift %s | parent %s",
+            tostring(button:GetName()), tostring(button:GetObjectType()), tostring(side), tostring(point),
+            tostring(relativeTo and relativeTo.GetName and relativeTo:GetName()), tostring(x),
+            tostring(moved and moved.x), tostring(moved and moved.shift), tostring(parent and parent:GetName()))
+    end
+    return split
 end
 
 function Debug.Start()
     if running then print("Gamepad Enhancer check: already running.") return end
     if InCombatLockdown() then print("Gamepad Enhancer check: start it out of combat.") return end
-    _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), checks = {}, split = 0, unsplit = 0, combatSamples = 0 }
+    _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), checks = {}, split = 0, unsplit = 0, combatSamples = 0,
+        failureDetails = {} }
     results = _G.GamepadEnhancerDebugDB
+    results.failures = setmetatable({}, { __mode = "k" })
     local settings = Enhancer.SavedSettings.Get()
     local savedGap = settings.gap
     local gap = (savedGap ~= 0) and savedGap or Debug.TEST_GAP
@@ -82,6 +94,7 @@ function Debug.Start()
         end
         if left <= 0 then
             running:SetScript("OnUpdate", nil)
+            results.failures = nil   -- frames can't be saved
             timer:SetText("")
             settings.gap = savedGap
             Enhancer.Gap.Apply()
