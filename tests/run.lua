@@ -134,6 +134,17 @@ test("shoulder icons at 100%: left as the game has them", function()
     expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 0.9)
 end)
 
+test("a spell with no range (a form) doesn't count as in range", function()
+    local addon = boot({ hideOutOfCombat = true })
+    _G.GetActionInfo = function() return "spell", 5487 end
+    _G.C_Spell = { SpellHasRange = function() return false end }
+    fire("ADDON_LOADED", "GamepadEnhancer")
+    game.target, game.inRange[1] = true, true
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.bar.alpha, 0.2, "the 'with a target' look, not 'in range'")
+    _G.GetActionInfo, _G.C_Spell = nil, nil
+end)
+
 test("fade time: alpha moves over the time set", function()
     boot({ hideOutOfCombat = true, fadeSeconds = 1 })
     fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")

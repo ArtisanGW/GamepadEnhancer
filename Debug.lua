@@ -50,9 +50,21 @@ local function shouldersRight(wantedAlpha)
     if not pageUnit then return false end
     for _, key in ipairs({ "LeftShoulderBackground", "RightShoulderBackground" }) do
         local texture = pageUnit[key]
-        if not (texture and texture:IsVisible() and pageUnit:GetEffectiveAlpha() > 0) then return false end
+        if not (texture and texture:IsVisible() and pageUnit:GetEffectiveAlpha() > 0) then
+            if #results.wrongDetails < 40 then
+                results.wrongDetails[#results.wrongDetails + 1] = string.format("shoulder %s: not visible (shown %s, page unit alpha %.2f)",
+                    key, tostring(texture and texture:IsShown()), pageUnit:GetEffectiveAlpha())
+            end
+            return false
+        end
         local want = wantedAlpha or results.shoulderAlphasBefore[key]
-        if math.abs(texture:GetAlpha() - want) > Debug.TOLERANCE then return false end
+        if math.abs(texture:GetAlpha() - want) > Debug.TOLERANCE then
+            if #results.wrongDetails < 40 then
+                results.wrongDetails[#results.wrongDetails + 1] = string.format("shoulder %s: alpha %.2f, wanted %.2f, shown %s, fade heads to %.2f",
+                    key, texture:GetAlpha(), want, tostring(texture:IsShown()), Enhancer.Fader.Target(texture))
+            end
+            return false
+        end
     end
     return true
 end
