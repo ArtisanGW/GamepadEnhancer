@@ -58,6 +58,9 @@ end
 -- One sample: the state, and whether every part has the alpha that state needs.
 local function sample(opacity)
     if Enhancer.Fader.IsBusy() then return "fading" end
+    if not InCombatLockdown() and Enhancer.OutOfCombatFade.TargetAlpha() ~= Enhancer.OutOfCombatFade.currentAlpha then
+        return "changing"   -- the range check (every 0.2 s) hasn't caught up yet
+    end
     local state, expected
     if InCombatLockdown() then
         state = "fight"
@@ -168,6 +171,59 @@ function Debug.Start()
     print("Gamepad Enhancer check: walk through hidden, faded and fight (see the top left).")
 end
 
-function Debug.Command()
+-- /gpe debug lt: 60 s recording of every alpha change on the controller bars,
+-- for "LT/RT hides the buttons". Each line: time, combat, then the alphas.
+function Debug.RecordTriggers()
+    if running then print("Gamepad Enhancer check: already running.") return end
+    local root = _G.GamepadMainActionBarFrame
+    _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), recording = {} }
+    local recording = _G.GamepadEnhancerDebugDB.recording
+    local settings = Enhancer.SavedSettings.Get()
+    recording[1] = string.format("settings: hide %s, faded %s, shoulders %s, fade %s s",
+        tostring(settings.hideOutOfCombat), tostring(settings.fadedOpacity), tostring(settings.shoulderOpacity), tostring(settings.fadeSeconds))
+    local function snapshot()
+        local lines = { InCombatLockdown() and "COMBAT" or "out",
+            string.format("root %.2f page %.2f", root:GetEffectiveAlpha(), root.PageUnit:GetAlpha()) }
+        for _, part in ipairs(Enhancer.OutOfCombatFade.Parts()) do
+            local name = part.GetName and part:GetName() or "?"
+            lines[#lines + 1] = string.format("%s %.2f%s", (name or "?"):gsub("GamepadMainActionBarFramePageUnit", ""),
+                part:GetAlpha(), Enhancer.OutOfCombatFade.originalAlphas[part] and "*" or "")
+        end
+        local bars = {}
+        for _, button in ipairs(Enhancer.BarHalves.AllButtons()) do
+            local bar = button:GetParent() and button:GetParent():GetParent()
+            if bar and not bars[bar] and bar:IsShown() then
+                bars[bar] = true
+                lines[#lines + 1] = string.format("%s eff %.2f", (bar:GetName() or "?"):gsub("GamepadMainActionBarFramePageUnit", ""), bar:GetEffectiveAlpha())
+            end
+        end
+        lines[#lines + 1] = "fader " .. (Enhancer.Fader.IsBusy() and "busy" or "idle")
+        return table.concat(lines, " | ")
+    end
+    running = CreateFrame("Frame")
+    local timer = UIParent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    timer:SetPoint("TOPLEFT", 20, -20)
+    local started, sinceSample, last = GetTime(), 0, nil
+    running:SetScript("OnUpdate", function(_, elapsed)
+        sinceSample = sinceSample + elapsed
+        if sinceSample < 0.1 then return end
+        sinceSample = 0
+        local now = snapshot()
+        if now ~= last and #recording < 400 then
+            recording[#recording + 1] = string.format("%.1f %s", GetTime() - started, now)
+            last = now
+        end
+        local left = 60 - (GetTime() - started)
+        timer:SetText(string.format("GPE recording (%d s): press LT and RT, in and out of combat", left))
+        if left <= 0 then
+            running:SetScript("OnUpdate", nil)
+            timer:SetText("")
+            showReloadBox("Gamepad Enhancer recording done.\n\nReload to save it.")
+        end
+    end)
+end
+
+function Debug.Command(argument)
+    if argument == "lt" then return Debug.RecordTriggers() end
     Debug.Start()
 end
