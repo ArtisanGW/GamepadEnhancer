@@ -20,9 +20,32 @@ local function isSpellWithoutRange(action)
     return succeeded and hasRange == false
 end
 
+-- The game says some melee spells (seen: Maul) are in range at any distance.
+-- So a melee spell (listed range 0 yards) counts only when the target is also
+-- within the duel distance (about 10 yards; CheckInteractDistance index 3,
+-- fine out of combat, which is when this is used).
+local DUEL_DISTANCE = 3
+
+local function isMeleeSpell(action)
+    if not (GetActionInfo and C_Spell and C_Spell.GetSpellInfo) then return false end
+    local actionType, spellID = GetActionInfo(action)
+    if actionType ~= "spell" or not spellID then return false end
+    local info = C_Spell.GetSpellInfo(spellID)
+    return info ~= nil and info.maxRange == 0
+end
+
+function SpellRange.TargetNear()
+    if not CheckInteractDistance then return true end
+    local succeeded, near = pcall(CheckInteractDistance, "target", DUEL_DISTANCE)
+    return not succeeded or near == true   -- if the game refuses, trust the spell's answer
+end
+
 -- What the range event last said for this action slot.
 function SpellRange.SlotInRange(action)
-    return type(action) == "number" and SpellRange.inRangeBySlot[action] == true and not isSpellWithoutRange(action)
+    if type(action) ~= "number" or SpellRange.inRangeBySlot[action] ~= true then return false end
+    if isSpellWithoutRange(action) then return false end
+    if isMeleeSpell(action) and not SpellRange.TargetNear() then return false end
+    return true
 end
 
 -- True when a target exists and a button of a shown bar has an action that reaches it.

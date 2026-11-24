@@ -154,6 +154,23 @@ test("a spell with no range (a form) doesn't count as in range", function()
     _G.GetActionInfo, _G.C_Spell = nil, nil
 end)
 
+test("a melee spell counts only when the target is near (Maul says in range from anywhere)", function()
+    local addon = boot({ hideOutOfCombat = true })
+    local near = false
+    _G.GetActionInfo = function() return "spell", 6807 end
+    _G.C_Spell = { SpellHasRange = function() return true end, GetSpellInfo = function() return { maxRange = 0 } end }
+    _G.CheckInteractDistance = function() return near end
+    fire("ADDON_LOADED", "GamepadEnhancer")
+    game.target = true
+    rangeEvent(true)
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.bar.alpha, 0.2, "far: not in range")
+    near = true
+    addon.OutOfCombatFade.Apply()
+    expectEqual(game.bar.alpha, 0.5, "near: in range")
+    _G.GetActionInfo, _G.C_Spell, _G.CheckInteractDistance = nil, nil, nil
+end)
+
 test("fade time: alpha moves over the time set", function()
     boot({ hideOutOfCombat = true, fadeSeconds = 1 })
     fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")

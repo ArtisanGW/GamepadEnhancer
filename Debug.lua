@@ -258,6 +258,7 @@ function Debug.RecordRange()
     end
     local function snapshot()
         local parts = { UnitExists("target") and ("target " .. tostring(UnitName("target"))) or "no target",
+            "within 10 yd " .. tostring(Enhancer.SpellRange.TargetNear()),
             "addon says " .. (Enhancer.SpellRange.TargetInRange() and "IN RANGE" or "out") }
         for _, button in ipairs(Enhancer.BarHalves.AllButtons()) do
             if button:IsVisible() and type(button.action) == "number" then
