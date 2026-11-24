@@ -102,7 +102,8 @@ function Debug.Start()
     if running then print("Gamepad Enhancer check: already running.") return end
     if InCombatLockdown() then print("Gamepad Enhancer check: start it out of combat.") return end
     local function newCounts() return { right = 0, wrong = 0, shouldersShown = 0 } end
-    _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), checks = {}, blocked = {}, wrongDetails = {},
+    local previous = type(_G.GamepadEnhancerDebugDB) == "table" and _G.GamepadEnhancerDebugDB or {}
+    _G.GamepadEnhancerDebugDB = { recording = previous.recording, startedAt = date("%Y-%m-%d %H:%M:%S"), checks = {}, blocked = {}, wrongDetails = {},
         states = { hidden = newCounts(), target = newCounts(), ["in range"] = newCounts(), fight = newCounts() } }
     results = _G.GamepadEnhancerDebugDB
     local settings = Enhancer.SavedSettings.Get()
@@ -111,7 +112,7 @@ function Debug.Start()
     local pageUnit = _G.GamepadMainActionBarFrame.PageUnit
     results.shoulderAlphasBefore = {}
     for _, key in ipairs({ "LeftShoulderBackground", "RightShoulderBackground" }) do
-        results.shoulderAlphasBefore[key] = pageUnit[key] and pageUnit[key]:GetAlpha() or 1
+        results.shoulderAlphasBefore[key] = pageUnit[key] and Enhancer.Fader.Target(pageUnit[key]) or 1
     end
     results.shoulderOpacity = (savedShoulder < 100) and savedShoulder or Debug.TEST_SHOULDER_OPACITY
     settings.shoulderOpacity = results.shoulderOpacity
@@ -122,7 +123,7 @@ function Debug.Start()
     -- Each part's alpha with the addon off: what a fight must bring back.
     Enhancer.OutOfCombatFade.Restore()
     results.alphasBefore = {}
-    for _, part in ipairs(Enhancer.OutOfCombatFade.Parts()) do results.alphasBefore[part] = part:GetAlpha() end
+    for _, part in ipairs(Enhancer.OutOfCombatFade.Parts()) do results.alphasBefore[part] = Enhancer.Fader.Target(part) end
     settings.hideOutOfCombat, settings.fadedOpacity, settings.inRangeOpacity = true, opacity.target, opacity.inRange
     Enhancer.OutOfCombatFade.Apply()
     Enhancer.ShoulderFade.Apply()
@@ -183,7 +184,8 @@ end
 function Debug.RecordTriggers()
     if running then print("Gamepad Enhancer check: already running.") return end
     local root = _G.GamepadMainActionBarFrame
-    _G.GamepadEnhancerDebugDB = { startedAt = date("%Y-%m-%d %H:%M:%S"), recording = {} }
+    if type(_G.GamepadEnhancerDebugDB) ~= "table" then _G.GamepadEnhancerDebugDB = {} end
+    _G.GamepadEnhancerDebugDB.recording = {}
     local recording = _G.GamepadEnhancerDebugDB.recording
     local settings = Enhancer.SavedSettings.Get()
     recording[1] = string.format("settings: hide %s, with a target %s, in range %s, shoulders %s, fade %s s",
