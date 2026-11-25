@@ -1,15 +1,17 @@
 -- The player's settings, kept in GamepadEnhancerDB (saved per account).
--- A missing value takes its default; defaults match the game's own layout.
+-- A missing value takes its default (the author's own settings).
 local _, Enhancer = ...
 
 local SavedSettings = {
     VERSION = 1,
     DEFAULTS = {
-        hideOutOfCombat = false,   -- the game shows its bars all the time
-        shoulderOpacity = 100,     -- % opacity of the shoulder icons out of combat (100 = the game's)
-        fadedOpacity = 20,         -- % opacity out of combat with a target out of range
-        inRangeOpacity = 50,       -- % opacity out of combat with the target in range of a bar spell
-        fadeSeconds = 0.3,         -- seconds a fade in or out takes
+        hideOutOfCombat = true,    -- hide the bars out of combat
+        shoulderOpacity = 60,      -- % opacity of the shoulder icons out of combat (100 = the game's)
+        fadedOpacity = 40,         -- % opacity out of combat with a target out of range
+        inRangeOpacity = 70,       -- % opacity out of combat with the target in range of a bar spell
+        showOnTriggers = true,     -- a held trigger or bumper shows the bars like a target does
+        triggerFadeSeconds = 0.1,  -- seconds the bars take to show or hide on a trigger or bumper
+        fadeSeconds = 2,           -- seconds a fade in or out takes
     },
 }
 Enhancer.SavedSettings = SavedSettings

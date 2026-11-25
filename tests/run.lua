@@ -37,9 +37,15 @@ local function newFrame(parent)
     return frame
 end
 
-local function boot(saved)
+-- Tests start from these values, not the addon's defaults, unless freshInstall.
+local TEST_SETTINGS = { hideOutOfCombat = false, fadedOpacity = 20, inRangeOpacity = 50, shoulderOpacity = 100,
+    showOnTriggers = true, triggerFadeSeconds = 0, fadeSeconds = 0 }
+
+local function boot(saved, freshInstall)
     saved = saved or {}
-    if saved.fadeSeconds == nil then saved.fadeSeconds = 0 end   -- at once, unless a test fades
+    if not freshInstall then
+        for key, value in pairs(TEST_SETTINGS) do if saved[key] == nil then saved[key] = value end end
+    end
     game = { combat = false, errors = {}, frames = {}, target = false, inRange = {} }
     _G.GamepadEnhancerDB = saved
     _G.InCombatLockdown = function() return game.combat end
@@ -89,10 +95,19 @@ local function rangeEvent(isInRange)
     end
 end
 
-test("off by default: nothing faded", function()
+test("off: nothing faded", function()
     boot(nil)
     fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
     expectEqual(game.bar.alpha, 1); expectEqual(game.decoration.alpha, 1)
+end)
+
+test("a fresh install: hidden out of combat, shoulder icons at 60%, fades over 2 s", function()
+    local addon = boot(nil, true)
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    game.fadeDriver.scripts.OnUpdate(game.fadeDriver, 2)
+    expectEqual(game.bar.alpha, 0, "bars")
+    expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 0.6, "shoulder icons")
+    expectEqual(addon.OutOfCombatFade.TriggerFadeSeconds(), 0.1, "trigger fade")
 end)
 
 test("on: hidden out of combat, shoulder icons stay", function()
@@ -102,7 +117,7 @@ test("on: hidden out of combat, shoulder icons stay", function()
     expectEqual(game.pageUnit.alpha, 1, "page unit"); expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 1, "shoulder")
 end)
 
-test("a target: 20%; in range of a bar spell: 50% (defaults)", function()
+test("a target: 20%; in range of a bar spell: 50%", function()
     local addon = boot({ hideOutOfCombat = true })
     fire("ADDON_LOADED", "GamepadEnhancer")
     game.target = true
@@ -132,6 +147,35 @@ test("a trigger or bumper held: the 'with a target' look, at once; let go: hidde
     expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 1, "shoulder icons untouched")
     game.bumper = false; GamepadMode.OnTargetModifierChanged(2, false)
     expectEqual(game.bar.alpha, 0, "bumper let go")
+end)
+
+test("trigger fade: a pull shows the bars over its own time, not the fade time", function()
+    boot({ hideOutOfCombat = true, fadeSeconds = 2, triggerFadeSeconds = 0.1 })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    local tick = function(seconds) game.fadeDriver.scripts.OnUpdate(game.fadeDriver, seconds) end
+    tick(2); expectEqual(game.bar.alpha, 0, "hidden after the first fade")
+    game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
+    tick(0.1); expectEqual(game.bar.alpha, 0.2, "shown after 0.1 s")
+    game.leftTrigger = false; GamepadMode.OnCrossBarModifierChanged("left", false)
+    tick(0.1); expectEqual(game.bar.alpha, 0, "hidden after 0.1 s")
+end)
+
+test("a pull during a slow fade-in to the same opacity speeds it up", function()
+    local addon = boot({ hideOutOfCombat = true, fadeSeconds = 2, triggerFadeSeconds = 0.1 })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    local tick = function(seconds) game.fadeDriver.scripts.OnUpdate(game.fadeDriver, seconds) end
+    tick(2)
+    game.target = true; addon.OutOfCombatFade.Update()
+    tick(0.5)
+    game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
+    tick(0.1); expectEqual(game.bar.alpha, 0.2, "at the 'with a target' look already")
+end)
+
+test("Show on triggers off: a trigger does nothing", function()
+    boot({ hideOutOfCombat = true, showOnTriggers = false })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
+    expectEqual(game.bar.alpha, 0, "still hidden")
 end)
 
 test("a trigger held in a fight changes nothing", function()

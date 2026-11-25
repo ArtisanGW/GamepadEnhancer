@@ -1,5 +1,5 @@
--- Moves a part's alpha to a new value over the fade time the player set
--- (0 = at once). One driver frame runs only while something is fading.
+-- Moves a part's alpha to a new value over the fade time the player set, or
+-- the time given (0 = at once). One driver frame runs only while something is fading.
 -- SetAlpha is allowed in combat, so a fade-in at the start of a fight runs too.
 local _, Enhancer = ...
 
@@ -26,14 +26,17 @@ function Fader.IsBusy()
     return next(Fader.fades) ~= nil
 end
 
-function Fader.To(part, alpha)
-    local duration = Fader.Duration()
+-- A fade already heading to alpha keeps going, unless it would take longer than duration.
+function Fader.To(part, alpha, duration)
+    duration = duration or Fader.Duration()
     if duration <= 0 then
         Fader.fades[part] = nil
         part:SetAlpha(alpha)
         return
     end
-    if Fader.Target(part) == alpha then return end
+    local fade = Fader.fades[part]
+    if fade and fade.to == alpha and fade.duration - fade.elapsed <= duration then return end
+    if not fade and part:GetAlpha() == alpha then return end
     Fader.fades[part] = { from = part:GetAlpha(), to = alpha, elapsed = 0, duration = duration }
     driver:Show()
 end
