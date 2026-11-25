@@ -52,21 +52,6 @@ function SettingsPage.Register()
         "How visible the bars are out of combat while your target is in range of one of their spells.\n\n"
         .. "Set it above \"With a target\" to see them better as you get close.")
 
-    local triggersName = "GamepadEnhancer_showOnTriggers"
-    local triggersSetting = Settings.RegisterAddOnSetting(category, triggersName, "showOnTriggers", settings,
-        Settings.VarType.Boolean, "Show on triggers", Enhancer.SavedSettings.DEFAULTS.showOnTriggers)
-    Settings.SetOnValueChangedCallback(triggersName, function() Enhancer.OutOfCombatFade.Apply() end)
-    Settings.CreateCheckbox(category, triggersSetting,
-        "Shows the bars out of combat while you hold a trigger or bumper, even with no target.\n\n"
-        .. "They show at the \"With a target\" opacity.")
-
-    local triggerFadeName = "GamepadEnhancer_triggerFadeSeconds"
-    local triggerFadeSetting = Settings.RegisterAddOnSetting(category, triggerFadeName, "triggerFadeSeconds", settings,
-        Settings.VarType.Number, "Trigger fade", Enhancer.SavedSettings.DEFAULTS.triggerFadeSeconds)
-    Settings.CreateSlider(category, triggerFadeSetting, sliderOptions(0, 2, 0.1, secondsLabel),
-        "How long the bars take to show or hide when you pull or let go of a trigger or bumper.\n\n"
-        .. "0 s changes them at once.")
-
     local shoulderName = "GamepadEnhancer_shoulderOpacity"
     local shoulderSetting = Settings.RegisterAddOnSetting(category, shoulderName, "shoulderOpacity", settings,
         Settings.VarType.Number, "Shoulder icons", Enhancer.SavedSettings.DEFAULTS.shoulderOpacity)
@@ -80,6 +65,21 @@ function SettingsPage.Register()
         Settings.VarType.Number, "Fade time", Enhancer.SavedSettings.DEFAULTS.fadeSeconds)
     Settings.CreateSlider(category, fadeSetting, sliderOptions(0, 10, 0.1, secondsLabel),
         "How long the bars and shoulder icons take to fade in or out.\n\n"
+        .. "0 s changes them at once.")
+
+    local triggersName = "GamepadEnhancer_showOnTriggers"
+    local triggersSetting = Settings.RegisterAddOnSetting(category, triggersName, "showOnTriggers", settings,
+        Settings.VarType.Boolean, "Show on triggers", Enhancer.SavedSettings.DEFAULTS.showOnTriggers)
+    Settings.SetOnValueChangedCallback(triggersName, function() Enhancer.OutOfCombatFade.Apply() end)
+    Settings.CreateCheckbox(category, triggersSetting,
+        "Shows the bars out of combat while you hold a trigger or bumper, even with no target.\n\n"
+        .. "They show at the \"With a target\" opacity.")
+
+    local triggerFadeName = "GamepadEnhancer_triggerFadeSeconds"
+    local triggerFadeSetting = Settings.RegisterAddOnSetting(category, triggerFadeName, "triggerFadeSeconds", settings,
+        Settings.VarType.Number, "Trigger fade", Enhancer.SavedSettings.DEFAULTS.triggerFadeSeconds)
+    Settings.CreateSlider(category, triggerFadeSetting, sliderOptions(0, 2, 0.1, secondsLabel),
+        "How long the bars take to show or hide when you pull or let go of a trigger or bumper.\n\n"
         .. "0 s changes them at once.")
 
     Settings.RegisterAddOnCategory(category)
