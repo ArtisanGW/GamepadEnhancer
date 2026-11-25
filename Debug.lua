@@ -78,7 +78,7 @@ local function sample(opacity)
     local state, expected
     if InCombatLockdown() then
         state = "fight"
-    elseif not UnitExists("target") then
+    elseif not UnitExists("target") and not Enhancer.TriggerOrBumper.IsHeld() then
         state, expected = "hidden", 0
     elseif Enhancer.SpellRange.TargetInRange() then
         state, expected = "in range", opacity.inRange / 100

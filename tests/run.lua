@@ -48,6 +48,20 @@ local function boot(saved)
     _G.CreateFrame = function() local frame = newFrame(nil); game.frames[#game.frames + 1] = frame; return frame end
     _G.SlashCmdList = {}
     _G.Settings = nil
+    -- The game's trigger and bumper state, and a post-hook like the game's.
+    game.leftTrigger, game.bumper = false, false
+    _G.GamepadMode = {
+        IsLeftModifierDown = function() return game.leftTrigger end,
+        IsRightModifierDown = function() return false end,
+        IsTargetingModifierDown = function() return game.bumper end,
+        IsHUDBindingModifierDown = function() return false end,
+        OnCrossBarModifierChanged = function() end,
+        OnTargetModifierChanged = function() end,
+    }
+    _G.hooksecurefunc = function(owner, functionName, hook)
+        local original = owner[functionName]
+        owner[functionName] = function(...) original(...); hook(...) end
+    end
     -- The controller's bars: the main frame with a decoration, the page unit
     -- (holding the shoulder textures) and one bar with a left and right half.
     local root = newFrame(nil)
@@ -103,6 +117,30 @@ test("a target: 20%; in range of a bar spell: 50% (defaults)", function()
     game.target = false
     addon.OutOfCombatFade.Apply()
     expectEqual(game.bar.alpha, 0, "no target")
+end)
+
+test("a trigger or bumper held: the 'with a target' look, at once; let go: hidden", function()
+    boot({ hideOutOfCombat = true })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    expectEqual(game.bar.alpha, 0, "hidden")
+    game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
+    expectEqual(game.bar.alpha, 0.2, "trigger held")
+    game.leftTrigger = false; GamepadMode.OnCrossBarModifierChanged("left", false)
+    expectEqual(game.bar.alpha, 0, "trigger let go")
+    game.bumper = true; GamepadMode.OnTargetModifierChanged(2, true)
+    expectEqual(game.bar.alpha, 0.2, "bumper held")
+    expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 1, "shoulder icons untouched")
+    game.bumper = false; GamepadMode.OnTargetModifierChanged(2, false)
+    expectEqual(game.bar.alpha, 0, "bumper let go")
+end)
+
+test("a trigger held in a fight changes nothing", function()
+    boot({ hideOutOfCombat = true })
+    fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
+    fire("PLAYER_REGEN_DISABLED"); game.combat = true
+    game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
+    game.leftTrigger = false; GamepadMode.OnCrossBarModifierChanged("left", false)
+    expectEqual(game.bar.alpha, 1, "still fully shown")
 end)
 
 test("a fight brings everything back, its end hides it again", function()

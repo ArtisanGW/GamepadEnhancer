@@ -1,7 +1,7 @@
 -- Out of combat, hides the controller's action bar frame except its two shoulder
--- icons (the targeting icons at the top), shows it faded while you have a target,
--- and less faded while that target is in range of one of its spells. In a fight
--- it all comes back.
+-- icons (the targeting icons at the top), shows it faded while you have a target
+-- or hold a trigger or bumper, and less faded while that target is in range of
+-- one of its spells. In a fight it all comes back.
 --
 -- The shoulder icons are textures of the page unit itself (LeftShoulderBackground,
 -- RightShoulderBackground and their icons, MainActionBarFrame.xml in the game's
@@ -38,13 +38,14 @@ function OutOfCombatFade.IsOn()
     return Enhancer.SavedSettings.Get().hideOutOfCombat == true
 end
 
--- The opacity out of combat: hidden with no target, the "with a target" look
--- with one out of range, and the "in range" look when a bar spell reaches it.
+-- The opacity out of combat: the "in range" look when a bar spell reaches the
+-- target, the "with a target" look with one out of range or while a trigger or
+-- bumper is held, else hidden.
 function OutOfCombatFade.TargetAlpha()
-    if not UnitExists("target") then return 0 end
     local settings = Enhancer.SavedSettings.Get()
     if Enhancer.SpellRange.TargetInRange() then return (tonumber(settings.inRangeOpacity) or 0) / 100 end
-    return (tonumber(settings.fadedOpacity) or 0) / 100
+    if UnitExists("target") or Enhancer.TriggerOrBumper.IsHeld() then return (tonumber(settings.fadedOpacity) or 0) / 100 end
+    return 0
 end
 
 -- Sets every part to alpha (out of combat only; the original alpha is kept to put back).
@@ -77,14 +78,18 @@ function OutOfCombatFade.Apply()
     end
 end
 
--- Range changes as you move: checked a few times a second while it's on and
--- out of combat; only a change touches the frames.
+-- Applies the opacity again only if it changed, while it's on and out of combat.
+function OutOfCombatFade.Update()
+    if not OutOfCombatFade.IsOn() or InCombatLockdown() then return end
+    if OutOfCombatFade.TargetAlpha() ~= OutOfCombatFade.currentAlpha then OutOfCombatFade.Apply() end
+end
+
+-- Range changes as you move: checked a few times a second.
 local checker = CreateFrame("Frame")
 local sinceCheck = 0
 checker:SetScript("OnUpdate", function(_, elapsed)
     sinceCheck = sinceCheck + elapsed
     if sinceCheck < OutOfCombatFade.CHECK_EVERY then return end
     sinceCheck = 0
-    if not OutOfCombatFade.IsOn() or InCombatLockdown() then return end
-    if OutOfCombatFade.TargetAlpha() ~= OutOfCombatFade.currentAlpha then OutOfCombatFade.Apply() end
+    OutOfCombatFade.Update()
 end)
