@@ -201,9 +201,9 @@ function Debug.RecordTriggers()
     _G.GamepadEnhancerDebugDB.recording = {}
     local recording = _G.GamepadEnhancerDebugDB.recording
     local settings = Enhancer.SavedSettings.Get()
-    recording[1] = string.format("settings: hide %s, with a target %s, in range %s, shoulders %s, fade %s s, triggers %s, trigger fade %s s, trigger opacity %s",
+    recording[1] = string.format("settings: hide %s, with a target %s, in range %s, shoulders %s, fade %s s, triggers %s, trigger fade %s s",
         tostring(settings.hideOutOfCombat), tostring(settings.fadedOpacity), tostring(settings.inRangeOpacity), tostring(settings.shoulderOpacity), tostring(settings.fadeSeconds),
-        tostring(settings.showOnTriggers), tostring(settings.triggerFadeSeconds), tostring(settings.triggerOpacity))
+        tostring(settings.showOnTriggers), tostring(settings.triggerFadeSeconds))
     local function snapshot()
         local lines = { InCombatLockdown() and "COMBAT" or "out",
             string.format("root %.2f page %.2f", root:GetEffectiveAlpha(), root.PageUnit:GetAlpha()) }

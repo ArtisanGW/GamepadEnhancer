@@ -39,7 +39,7 @@ end
 
 -- Tests start from these values, not the addon's defaults, unless freshInstall.
 local TEST_SETTINGS = { hideOutOfCombat = false, fadedOpacity = 20, inRangeOpacity = 50, shoulderOpacity = 100,
-    showOnTriggers = true, triggerFadeSeconds = 0, triggerOpacity = 30, fadeSeconds = 0 }
+    showOnTriggers = true, triggerFadeSeconds = 0, fadeSeconds = 0 }
 
 local function boot(saved, freshInstall)
     saved = saved or {}
@@ -110,7 +110,7 @@ test("a fresh install: hidden out of combat, shoulder icons at 60%, fades over 2
     expectEqual(addon.OutOfCombatFade.TriggerFadeSeconds(), 0.1, "trigger fade")
     game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
     game.fadeDriver.scripts.OnUpdate(game.fadeDriver, 0.1)
-    expectEqual(game.bar.alpha, 0.4, "trigger opacity")
+    expectEqual(game.bar.alpha, 0.4, "the 'with a target' opacity")
 end)
 
 test("on: hidden out of combat, shoulder icons stay", function()
@@ -137,20 +137,18 @@ test("a target: 20%; in range of a bar spell: 50%", function()
     expectEqual(game.bar.alpha, 0, "no target")
 end)
 
-test("a trigger or bumper held: the trigger opacity, at once; let go: hidden", function()
+test("a trigger or bumper held: the 'with a target' look, at once; let go: hidden", function()
     local addon = boot({ hideOutOfCombat = true })
     fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
     expectEqual(game.bar.alpha, 0, "hidden")
     game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
-    expectEqual(game.bar.alpha, 0.3, "trigger held")
+    expectEqual(game.bar.alpha, 0.2, "trigger held")
     game.leftTrigger = false; GamepadMode.OnCrossBarModifierChanged("left", false)
     expectEqual(game.bar.alpha, 0, "trigger let go")
     game.bumper = true; GamepadMode.OnTargetModifierChanged(2, true)
-    expectEqual(game.bar.alpha, 0.3, "bumper held")
-    game.target = true; addon.OutOfCombatFade.Update()
-    expectEqual(game.bar.alpha, 0.3, "with a target out of range (20%): the higher one")
-    rangeEvent(true); addon.OutOfCombatFade.Update()
-    expectEqual(game.bar.alpha, 0.5, "in range (50%): the higher one")
+    expectEqual(game.bar.alpha, 0.2, "bumper held")
+    game.target = true; rangeEvent(true); addon.OutOfCombatFade.Update()
+    expectEqual(game.bar.alpha, 0.5, "in range: the 'in range' look")
     game.target = false; rangeEvent(false)
     expectEqual(game.pageUnit.LeftShoulderBackground.alpha, 1, "shoulder icons untouched")
     game.bumper = false; GamepadMode.OnTargetModifierChanged(2, false)
@@ -163,13 +161,13 @@ test("trigger fade: a pull shows the bars over its own time, not the fade time",
     local tick = function(seconds) game.fadeDriver.scripts.OnUpdate(game.fadeDriver, seconds) end
     tick(2); expectEqual(game.bar.alpha, 0, "hidden after the first fade")
     game.leftTrigger = true; GamepadMode.OnCrossBarModifierChanged("left", true)
-    tick(0.1); expectEqual(game.bar.alpha, 0.3, "shown after 0.1 s")
+    tick(0.1); expectEqual(game.bar.alpha, 0.2, "shown after 0.1 s")
     game.leftTrigger = false; GamepadMode.OnCrossBarModifierChanged("left", false)
     tick(0.1); expectEqual(game.bar.alpha, 0, "hidden after 0.1 s")
 end)
 
 test("a pull during a slow fade-in to the same opacity speeds it up", function()
-    local addon = boot({ hideOutOfCombat = true, fadeSeconds = 2, triggerFadeSeconds = 0.1, triggerOpacity = 20 })
+    local addon = boot({ hideOutOfCombat = true, fadeSeconds = 2, triggerFadeSeconds = 0.1 })
     fire("ADDON_LOADED", "GamepadEnhancer"); fire("PLAYER_ENTERING_WORLD")
     local tick = function(seconds) game.fadeDriver.scripts.OnUpdate(game.fadeDriver, seconds) end
     tick(2)
