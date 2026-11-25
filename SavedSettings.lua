@@ -9,8 +9,9 @@ local SavedSettings = {
         shoulderOpacity = 60,      -- % opacity of the shoulder icons out of combat (100 = the game's)
         fadedOpacity = 40,         -- % opacity out of combat with a target out of range
         inRangeOpacity = 70,       -- % opacity out of combat with the target in range of a bar spell
-        showOnTriggers = true,     -- a held trigger or bumper shows the bars like a target does
+        showOnTriggers = true,     -- a held trigger or bumper shows the bars
         triggerFadeSeconds = 0.1,  -- seconds the bars take to show or hide on a trigger or bumper
+        triggerOpacity = 40,       -- % opacity out of combat while a trigger or bumper is held
         fadeSeconds = 2,           -- seconds a fade in or out takes
     },
 }

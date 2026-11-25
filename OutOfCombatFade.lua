@@ -48,13 +48,18 @@ function OutOfCombatFade.TriggerFadeSeconds()
 end
 
 -- The opacity out of combat: the "in range" look when a bar spell reaches the
--- target, the "with a target" look with one out of range or while a trigger is
--- held, else hidden.
+-- target, the "with a target" look with one out of range, else hidden; while a
+-- trigger is held, at least the trigger opacity.
 function OutOfCombatFade.TargetAlpha()
     local settings = Enhancer.SavedSettings.Get()
-    if Enhancer.SpellRange.TargetInRange() then return (tonumber(settings.inRangeOpacity) or 0) / 100 end
-    if UnitExists("target") or OutOfCombatFade.TriggerHeld() then return (tonumber(settings.fadedOpacity) or 0) / 100 end
-    return 0
+    local percent = 0
+    if Enhancer.SpellRange.TargetInRange() then
+        percent = tonumber(settings.inRangeOpacity) or 0
+    elseif UnitExists("target") then
+        percent = tonumber(settings.fadedOpacity) or 0
+    end
+    if OutOfCombatFade.TriggerHeld() then percent = math.max(percent, tonumber(settings.triggerOpacity) or 0) end
+    return percent / 100
 end
 
 -- Sets every part to alpha over duration (nil: the fade time), out of combat
