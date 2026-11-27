@@ -1,6 +1,8 @@
 package-as: GamepadEnhancer
 
 ignore:
+  # the screenshots for the CurseForge gallery
+  - Media/screenshots
   - tests
   - docs
   # /gpen debug, the in-game check
