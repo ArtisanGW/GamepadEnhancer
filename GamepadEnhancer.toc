@@ -11,18 +11,18 @@
 #@end-non-debug@
 ## Category: Gamepad
 
-SavedSettings.lua
-CombatQueue.lua
-BarHalves.lua
-SpellRange.lua
-TriggerOrBumper.lua
-Fader.lua
-OutOfCombatFade.lua
-ShoulderFade.lua
-SettingsPage.lua
-SlashCommand.lua
-Events.lua
+Code/SavedSettings.lua
+Code/CombatQueue.lua
+Code/BarHalves.lua
+Code/SpellRange.lua
+Code/TriggerOrBumper.lua
+Code/Fader.lua
+Code/OutOfCombatFade.lua
+Code/ShoulderFade.lua
+Code/SettingsPage.lua
+Code/SlashCommand.lua
+Code/Events.lua
 #@do-not-package@
 # Development builds only: left out of the release (.pkgmeta)
-Debug.lua
+Code/Debug.lua
 #@end-do-not-package@

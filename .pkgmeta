@@ -1,13 +1,12 @@
 package-as: GamepadEnhancer
 
 ignore:
-  # the screenshots for the CurseForge gallery
-  - Media/screenshots
+  # the CurseForge page material: its text, gallery screenshots, icon sources
+  - Data
   - tests
   - docs
   # /gpen debug, the in-game check
-  - Debug.lua
-  - CURSEFORGE.md
+  - Code/Debug.lua
 
 manual-changelog:
   filename: CHANGELOG.md
