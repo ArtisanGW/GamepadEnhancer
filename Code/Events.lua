@@ -1,5 +1,19 @@
 -- The addon's events: settings on load, the fade out of combat (and on a
 -- trigger or bumper), and changes held back in combat after it.
+--
+-- Files, one job each (in the .toc's load order):
+--   SavedSettings.lua    the saved settings, with their defaults
+--   CombatQueue.lua      bar changes asked for in combat, run after it
+--   BarHalves.lua        which half of a controller bar a button is on
+--   SpellRange.lua       whether your target is in range of a bar spell
+--   TriggerOrBumper.lua  whether a trigger or bumper is held
+--   Fader.lua            fades a part's alpha over the time you set
+--   OutOfCombatFade.lua  out of combat: the bars hidden or faded
+--   ShoulderFade.lua     out of combat: the shoulder icons at their own opacity
+--   SettingsPage.lua     the settings page
+--   SlashCommand.lua     /gpen
+--   Events.lua           the events: settings on load, the fades, changes held back in combat
+--   Debug.lua            development builds only: /gpen debug
 local addonName, Enhancer = ...
 
 local eventFrame = CreateFrame("Frame")
